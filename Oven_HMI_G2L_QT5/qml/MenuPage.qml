@@ -187,6 +187,13 @@ Item {
                         Image {
                             anchors.fill: parent
                             source: model.image
+                            // Qt5 port / MA35D1: cap decoded size. The delegate is
+                            // 250x250, so a 256x256 decode is plenty and keeps each
+                            // thumbnail at ~256KB instead of the full-res RGBA
+                            // (which previously OOM-killed the app on 108MB RAM).
+                            sourceSize: Qt.size(256, 256)
+                            asynchronous: true
+                            cache: true
                             fillMode: Image.PreserveAspectFit; mipmap: true
                             opacity: parent.selected ? 0.0 : 1.0
                             visible: opacity > 0.0
@@ -195,6 +202,7 @@ Item {
 
                         // Layer 2: 3D model (selected state).
                         Item {
+                            id: model3dLayer
                             anchors.fill: parent
                             opacity: parent.selected ? 1.0 : 0.0
                             visible: opacity > 0.0
@@ -232,12 +240,16 @@ Item {
                                     }
 
                                     Node {
-                                        NumberAnimation on eulerRotation.y { running: parent.parent.parent.visible; from: 0; to: 360; duration: 12000; loops: Animation.Infinite }
+                                        NumberAnimation on eulerRotation.y { running: model3dLayer.visible; from: 0; to: 360; duration: 12000; loops: Animation.Infinite }
 
                                         // Model loader with per-drink lighting adjustments.
                                         DrinkModel3D {
                                             id: model3d
                                             drinkId: model.id
+                                            // Only load this model's meshes when its
+                                            // tile is selected (keeps one model resident
+                                            // at a time instead of all five).
+                                            active: model3dLayer.visible
 
                                             // Refresh lighting when the drink changes.
                                             onDrinkIdChanged: refreshLights()

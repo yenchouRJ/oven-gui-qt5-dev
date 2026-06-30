@@ -6,8 +6,15 @@ Node {
     // Current drink identifier used to select a model.
     property string drinkId: ""
 
+    // Qt5 port / MA35D1: gate mesh loading. The menu carousel instantiates one
+    // DrinkModel3D per item; loading every model's meshes at once (~33MB plus GPU
+    // buffers) contributed to the OOM on 108MB RAM. Bind `active` to selection so
+    // only the visible model is resident. Defaults true for single-model pages.
+    property bool active: true
+
     Loader3D {
         id: modelLoader
+        active: root.active
         source: getModelSource(root.drinkId)
         
         // Apply drink-specific transforms after the model loads.

@@ -37,8 +37,25 @@ See `AGENT.md` for the full project analysis and component breakdown.
   auto-rotate `NumberAnimation` on the model node. Verified all other Quick3D types
   used (Loader3D/View3D/SceneEnvironment/cameras/lights/PrincipledMaterial + MSAA/SSAA
   enums + brightness/fade/castsShadow) **do** exist in the backport.
-- **TODO next:** on-target run + FPS measurement → then Phase 5 (3D AA/shadow
-  reduction) and Phase 5b (asset downscaling).
+- **DONE** Phase 5b (asset downscaling — fixes on-target OOM): first on-target run
+  was OOM-killed (`oven-gui` hit ~1.1GB virt / ~80MB RSS on a board with only
+  ~108MB managed RAM). Root cause: the menu `Repeater` builds all 5 carousel
+  delegates at once, each an `Image` with **no `sourceSize`** (`mipmap:true`), so
+  every full-res food PNG decoded simultaneously — chicken 4000×4000 = **61MB**
+  RGBA, pizza 34MB, fish 24MB, meatball 24MB ≈ **144MB** of textures alone. Fixes:
+  - Physically downscaled `chicken/pizza/fish/meatball.png` → **512×512** (LANCZOS,
+    optimized): files 26.7MB → 1.26MB; decoded RGBA 144MB → ~4MB. `bread.png`
+    already small (kept).
+  - `MenuPage` carousel `Image`: added `sourceSize: Qt.size(256,256)` (matches the
+    250px tile) + `asynchronous: true` to bound decode regardless of source.
+  - `DrinkModel3D`: added an `active` gate on `Loader3D`; `MenuPage` binds it to the
+    selected tile (`model3dLayer.visible`) so only **one** model's meshes (~max 13MB
+    fish) is resident instead of all five at once. Fixed the auto-rotate
+    `NumberAnimation` `running:` to use the same `model3dLayer.visible` (it was bound
+    to `View3D.visible`, which is always true).
+  - Binary shrank ~58MB → **33MB**; cross-compile + `qmllint` clean.
+- **TODO next:** re-deploy to MA35D1 (verify no OOM, measure FPS) → then Phase 5
+  (cut Quick3D AA/shadows). Mesh decimation (`*.mesh`) still pending if FPS is low.
 
 ---
 
@@ -113,15 +130,18 @@ See `AGENT.md` for the full project analysis and component breakdown.
 
 ### Phase 5b — Asset downscaling (performance / size)
 > ~94 MB of desktop-grade assets. Goal: shrink runtime cost & resource size.
-- [ ] **Textures/icons** (`assets/media/*.png`): downscale to display resolution,
-      recompress; remove unused art.
-- [ ] **Video** (`assets/media/baking_pizza.mov`, ~large): since playback is
-      disabled (Phase 4), drop it from `qml.qrc` or replace with a tiny static frame
-      to cut binary size; keep original out-of-tree for later.
+- [x] **Textures/icons** (`assets/media/*.png`): downscaled the four food PNGs to
+      512×512 (chicken/pizza/fish/meatball: 26.7MB → 1.26MB on disk; 144MB → ~4MB
+      decoded). Added `sourceSize`/`asynchronous` to the carousel `Image` so decode
+      is bounded. **This was the on-target OOM fix.**
+- [x] **Video** (`assets/media/baking_pizza.mov`): already excluded from `qml.qrc`
+      (Phase 4). Original kept on disk for later re-enable/downscaling.
 - [ ] **Meshes** (`assets/convert_model/**/*.mesh`): decimate / re-export lower-poly
       models; the high-poly desktop meshes are costly for software vertex processing.
+      (Mitigated for now: `Loader3D.active` gate keeps only the selected model
+      resident instead of all five.)
 - [ ] Trim `qml.qrc` to only the assets actually used (it embeds everything now).
-- [ ] Measure resulting binary size + load time before/after.
+- [x] Measure resulting binary size before/after: ~58MB → **33MB**.
 
 ### Phase 6 — Particles & misc
 - [ ] Verify `QtQuick.Particles` smoke effect (ParticleSystem/Emitter/ItemParticle)
