@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/qml">
+        <!-- App QML files -->
         <file>Main.qml</file>
         <file>MenuPage.qml</file>
         <file>AdjustmentPage.qml</file>
@@ -13,100 +14,102 @@
         <file>qmldir</file>
         <file>drinks.js</file>
 
-        <file alias="models/pizza/Pizza.qml">../assets/convert_model/pizza/Pizza.qml</file>
-        <file alias="models/pizza/meshes/mesh_mesh.mesh">../assets/convert_model/pizza/meshes/mesh_mesh.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh10.mesh">../assets/convert_model/pizza/meshes/mesh_mesh10.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh12.mesh">../assets/convert_model/pizza/meshes/mesh_mesh12.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh14.mesh">../assets/convert_model/pizza/meshes/mesh_mesh14.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh16.mesh">../assets/convert_model/pizza/meshes/mesh_mesh16.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh18.mesh">../assets/convert_model/pizza/meshes/mesh_mesh18.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh20.mesh">../assets/convert_model/pizza/meshes/mesh_mesh20.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh22.mesh">../assets/convert_model/pizza/meshes/mesh_mesh22.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh24.mesh">../assets/convert_model/pizza/meshes/mesh_mesh24.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh26.mesh">../assets/convert_model/pizza/meshes/mesh_mesh26.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh28.mesh">../assets/convert_model/pizza/meshes/mesh_mesh28.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh31.mesh">../assets/convert_model/pizza/meshes/mesh_mesh31.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh34.mesh">../assets/convert_model/pizza/meshes/mesh_mesh34.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh36.mesh">../assets/convert_model/pizza/meshes/mesh_mesh36.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh38.mesh">../assets/convert_model/pizza/meshes/mesh_mesh38.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh40.mesh">../assets/convert_model/pizza/meshes/mesh_mesh40.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh42.mesh">../assets/convert_model/pizza/meshes/mesh_mesh42.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh44.mesh">../assets/convert_model/pizza/meshes/mesh_mesh44.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh46.mesh">../assets/convert_model/pizza/meshes/mesh_mesh46.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh48.mesh">../assets/convert_model/pizza/meshes/mesh_mesh48.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh50.mesh">../assets/convert_model/pizza/meshes/mesh_mesh50.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh52.mesh">../assets/convert_model/pizza/meshes/mesh_mesh52.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh54.mesh">../assets/convert_model/pizza/meshes/mesh_mesh54.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh56.mesh">../assets/convert_model/pizza/meshes/mesh_mesh56.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh58.mesh">../assets/convert_model/pizza/meshes/mesh_mesh58.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh61.mesh">../assets/convert_model/pizza/meshes/mesh_mesh61.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh63.mesh">../assets/convert_model/pizza/meshes/mesh_mesh63.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh65.mesh">../assets/convert_model/pizza/meshes/mesh_mesh65.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh67.mesh">../assets/convert_model/pizza/meshes/mesh_mesh67.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh69.mesh">../assets/convert_model/pizza/meshes/mesh_mesh69.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh7.mesh">../assets/convert_model/pizza/meshes/mesh_mesh7.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh71.mesh">../assets/convert_model/pizza/meshes/mesh_mesh71.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh74.mesh">../assets/convert_model/pizza/meshes/mesh_mesh74.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh76.mesh">../assets/convert_model/pizza/meshes/mesh_mesh76.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh78.mesh">../assets/convert_model/pizza/meshes/mesh_mesh78.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh80.mesh">../assets/convert_model/pizza/meshes/mesh_mesh80.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh82.mesh">../assets/convert_model/pizza/meshes/mesh_mesh82.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh84.mesh">../assets/convert_model/pizza/meshes/mesh_mesh84.mesh</file>
-        <file alias="models/pizza/meshes/mesh_mesh87.mesh">../assets/convert_model/pizza/meshes/mesh_mesh87.mesh</file>
-        
+        <!-- pizza -->
+        <file alias="models/pizza/Pizza.qml">../assets/balsam_out/pizza/Pizza.qml</file>
+        <file alias="models/pizza/meshes/circle_020.mesh">../assets/balsam_out/pizza/meshes/circle_020.mesh</file>
+        <file alias="models/pizza/meshes/cube_453.mesh">../assets/balsam_out/pizza/meshes/cube_453.mesh</file>
+        <file alias="models/pizza/meshes/cube_454.mesh">../assets/balsam_out/pizza/meshes/cube_454.mesh</file>
+        <file alias="models/pizza/meshes/cube_455.mesh">../assets/balsam_out/pizza/meshes/cube_455.mesh</file>
+        <file alias="models/pizza/meshes/cube_456.mesh">../assets/balsam_out/pizza/meshes/cube_456.mesh</file>
+        <file alias="models/pizza/meshes/cube_457.mesh">../assets/balsam_out/pizza/meshes/cube_457.mesh</file>
+        <file alias="models/pizza/meshes/cube_458.mesh">../assets/balsam_out/pizza/meshes/cube_458.mesh</file>
+        <file alias="models/pizza/meshes/cube_459.mesh">../assets/balsam_out/pizza/meshes/cube_459.mesh</file>
+        <file alias="models/pizza/meshes/cube_460.mesh">../assets/balsam_out/pizza/meshes/cube_460.mesh</file>
+        <file alias="models/pizza/meshes/cube_461.mesh">../assets/balsam_out/pizza/meshes/cube_461.mesh</file>
+        <file alias="models/pizza/meshes/cube_462.mesh">../assets/balsam_out/pizza/meshes/cube_462.mesh</file>
+        <file alias="models/pizza/meshes/cube_463.mesh">../assets/balsam_out/pizza/meshes/cube_463.mesh</file>
+        <file alias="models/pizza/meshes/cube_464.mesh">../assets/balsam_out/pizza/meshes/cube_464.mesh</file>
+        <file alias="models/pizza/meshes/cube_465.mesh">../assets/balsam_out/pizza/meshes/cube_465.mesh</file>
+        <file alias="models/pizza/meshes/cube_466.mesh">../assets/balsam_out/pizza/meshes/cube_466.mesh</file>
+        <file alias="models/pizza/meshes/cube_467.mesh">../assets/balsam_out/pizza/meshes/cube_467.mesh</file>
+        <file alias="models/pizza/meshes/cube_468.mesh">../assets/balsam_out/pizza/meshes/cube_468.mesh</file>
+        <file alias="models/pizza/meshes/cube_469.mesh">../assets/balsam_out/pizza/meshes/cube_469.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_105.mesh">../assets/balsam_out/pizza/meshes/cylinder_105.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_106.mesh">../assets/balsam_out/pizza/meshes/cylinder_106.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_107.mesh">../assets/balsam_out/pizza/meshes/cylinder_107.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_108.mesh">../assets/balsam_out/pizza/meshes/cylinder_108.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_109.mesh">../assets/balsam_out/pizza/meshes/cylinder_109.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_110.mesh">../assets/balsam_out/pizza/meshes/cylinder_110.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_111.mesh">../assets/balsam_out/pizza/meshes/cylinder_111.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_112.mesh">../assets/balsam_out/pizza/meshes/cylinder_112.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_113.mesh">../assets/balsam_out/pizza/meshes/cylinder_113.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_114.mesh">../assets/balsam_out/pizza/meshes/cylinder_114.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_115.mesh">../assets/balsam_out/pizza/meshes/cylinder_115.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_116.mesh">../assets/balsam_out/pizza/meshes/cylinder_116.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_117.mesh">../assets/balsam_out/pizza/meshes/cylinder_117.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_118.mesh">../assets/balsam_out/pizza/meshes/cylinder_118.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_119.mesh">../assets/balsam_out/pizza/meshes/cylinder_119.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_120.mesh">../assets/balsam_out/pizza/meshes/cylinder_120.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_121.mesh">../assets/balsam_out/pizza/meshes/cylinder_121.mesh</file>
+        <file alias="models/pizza/meshes/cylinder_122.mesh">../assets/balsam_out/pizza/meshes/cylinder_122.mesh</file>
+        <file alias="models/pizza/meshes/plane_001.mesh">../assets/balsam_out/pizza/meshes/plane_001.mesh</file>
+        <file alias="models/pizza/meshes/plane_074.mesh">../assets/balsam_out/pizza/meshes/plane_074.mesh</file>
+        <file alias="models/pizza/meshes/plane_075.mesh">../assets/balsam_out/pizza/meshes/plane_075.mesh</file>
+        <file alias="models/pizza/meshes/plane_076.mesh">../assets/balsam_out/pizza/meshes/plane_076.mesh</file>
 
-        <file alias="models/chicken/Chicken.qml">../assets/convert_model/chicken/Chicken.qml</file>
-        <file alias="models/chicken/meshes/cube_002_mesh.mesh">../assets/convert_model/chicken/meshes/cube_002_mesh.mesh</file>
-        <file alias="models/chicken/meshes/cube_003_mesh.mesh">../assets/convert_model/chicken/meshes/cube_003_mesh.mesh</file>
-        <file alias="models/chicken/meshes/cube_004_mesh.mesh">../assets/convert_model/chicken/meshes/cube_004_mesh.mesh</file>
-        <file alias="models/chicken/meshes/cube_006_mesh.mesh">../assets/convert_model/chicken/meshes/cube_006_mesh.mesh</file>
-        <file alias="models/chicken/meshes/cylinder_001_mesh.mesh">../assets/convert_model/chicken/meshes/cylinder_001_mesh.mesh</file>
-        <file alias="models/chicken/meshes/cylinder_002_mesh.mesh">../assets/convert_model/chicken/meshes/cylinder_002_mesh.mesh</file>
-        <file alias="models/chicken/meshes/cylinder_004_mesh.mesh">../assets/convert_model/chicken/meshes/cylinder_004_mesh.mesh</file>
-        
-        <file alias="models/chicken/meshes/sphere_001_mesh.mesh">../assets/convert_model/chicken/meshes/sphere_001_mesh.mesh</file>
-        <file alias="models/chicken/meshes/sphere_002_mesh.mesh">../assets/convert_model/chicken/meshes/sphere_002_mesh.mesh</file>
+        <!-- chicken -->
+        <file alias="models/chicken/Chicken.qml">../assets/balsam_out/chicken/Chicken.qml</file>
+        <file alias="models/chicken/meshes/cube.mesh">../assets/balsam_out/chicken/meshes/cube.mesh</file>
+        <file alias="models/chicken/meshes/cube_001.mesh">../assets/balsam_out/chicken/meshes/cube_001.mesh</file>
+        <file alias="models/chicken/meshes/cube_002.mesh">../assets/balsam_out/chicken/meshes/cube_002.mesh</file>
+        <file alias="models/chicken/meshes/cube_003.mesh">../assets/balsam_out/chicken/meshes/cube_003.mesh</file>
+        <file alias="models/chicken/meshes/cylinder.mesh">../assets/balsam_out/chicken/meshes/cylinder.mesh</file>
+        <file alias="models/chicken/meshes/cylinder_001.mesh">../assets/balsam_out/chicken/meshes/cylinder_001.mesh</file>
+        <file alias="models/chicken/meshes/cylinder_002.mesh">../assets/balsam_out/chicken/meshes/cylinder_002.mesh</file>
+        <file alias="models/chicken/meshes/plane_002.mesh">../assets/balsam_out/chicken/meshes/plane_002.mesh</file>
+        <file alias="models/chicken/meshes/sphere.mesh">../assets/balsam_out/chicken/meshes/sphere.mesh</file>
+        <file alias="models/chicken/meshes/sphere_001.mesh">../assets/balsam_out/chicken/meshes/sphere_001.mesh</file>
 
-        <file alias="models/fish/Fish.qml">../assets/convert_model/fish/Fish.qml</file>
-        <file alias="models/fish/meshes/mesh_mesh.mesh">../assets/convert_model/fish/meshes/mesh_mesh.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh14.mesh">../assets/convert_model/fish/meshes/mesh_mesh14.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh17.mesh">../assets/convert_model/fish/meshes/mesh_mesh17.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh19.mesh">../assets/convert_model/fish/meshes/mesh_mesh19.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh21.mesh">../assets/convert_model/fish/meshes/mesh_mesh21.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh24.mesh">../assets/convert_model/fish/meshes/mesh_mesh24.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh26.mesh">../assets/convert_model/fish/meshes/mesh_mesh26.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh28.mesh">../assets/convert_model/fish/meshes/mesh_mesh28.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh30.mesh">../assets/convert_model/fish/meshes/mesh_mesh30.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh33.mesh">../assets/convert_model/fish/meshes/mesh_mesh33.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh35.mesh">../assets/convert_model/fish/meshes/mesh_mesh35.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh37.mesh">../assets/convert_model/fish/meshes/mesh_mesh37.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh39.mesh">../assets/convert_model/fish/meshes/mesh_mesh39.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh41.mesh">../assets/convert_model/fish/meshes/mesh_mesh41.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh43.mesh">../assets/convert_model/fish/meshes/mesh_mesh43.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh45.mesh">../assets/convert_model/fish/meshes/mesh_mesh45.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh47.mesh">../assets/convert_model/fish/meshes/mesh_mesh47.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh49.mesh">../assets/convert_model/fish/meshes/mesh_mesh49.mesh</file>
-        <file alias="models/fish/meshes/mesh_mesh6.mesh">../assets/convert_model/fish/meshes/mesh_mesh6.mesh</file>
-        <file alias="models/fish/meshes/sphere_026_mesh.mesh">../assets/convert_model/fish/meshes/sphere_026_mesh.mesh</file>
-        <file alias="models/fish/meshes/sphere_027_mesh.mesh">../assets/convert_model/fish/meshes/sphere_027_mesh.mesh</file>
+        <!-- fish -->
+        <file alias="models/fish/Fish.qml">../assets/balsam_out/fish/Fish.qml</file>
+        <file alias="models/fish/meshes/circle.mesh">../assets/balsam_out/fish/meshes/circle.mesh</file>
+        <file alias="models/fish/meshes/cube_071.mesh">../assets/balsam_out/fish/meshes/cube_071.mesh</file>
+        <file alias="models/fish/meshes/cube_072.mesh">../assets/balsam_out/fish/meshes/cube_072.mesh</file>
+        <file alias="models/fish/meshes/cube_073.mesh">../assets/balsam_out/fish/meshes/cube_073.mesh</file>
+        <file alias="models/fish/meshes/cube_074.mesh">../assets/balsam_out/fish/meshes/cube_074.mesh</file>
+        <file alias="models/fish/meshes/cube_075.mesh">../assets/balsam_out/fish/meshes/cube_075.mesh</file>
+        <file alias="models/fish/meshes/cube_076.mesh">../assets/balsam_out/fish/meshes/cube_076.mesh</file>
+        <file alias="models/fish/meshes/cube_077.mesh">../assets/balsam_out/fish/meshes/cube_077.mesh</file>
+        <file alias="models/fish/meshes/cube_078.mesh">../assets/balsam_out/fish/meshes/cube_078.mesh</file>
+        <file alias="models/fish/meshes/cube_079.mesh">../assets/balsam_out/fish/meshes/cube_079.mesh</file>
+        <file alias="models/fish/meshes/cube_080.mesh">../assets/balsam_out/fish/meshes/cube_080.mesh</file>
+        <file alias="models/fish/meshes/cube_081.mesh">../assets/balsam_out/fish/meshes/cube_081.mesh</file>
+        <file alias="models/fish/meshes/cube_082.mesh">../assets/balsam_out/fish/meshes/cube_082.mesh</file>
+        <file alias="models/fish/meshes/cylinder_014.mesh">../assets/balsam_out/fish/meshes/cylinder_014.mesh</file>
+        <file alias="models/fish/meshes/cylinder_015.mesh">../assets/balsam_out/fish/meshes/cylinder_015.mesh</file>
+        <file alias="models/fish/meshes/cylinder_016.mesh">../assets/balsam_out/fish/meshes/cylinder_016.mesh</file>
+        <file alias="models/fish/meshes/cylinder_017.mesh">../assets/balsam_out/fish/meshes/cylinder_017.mesh</file>
+        <file alias="models/fish/meshes/sphere_026.mesh">../assets/balsam_out/fish/meshes/sphere_026.mesh</file>
+        <file alias="models/fish/meshes/sphere_027.mesh">../assets/balsam_out/fish/meshes/sphere_027.mesh</file>
+        <file alias="models/fish/meshes/torus_003.mesh">../assets/balsam_out/fish/meshes/torus_003.mesh</file>
+        <file alias="models/fish/meshes/torus_004.mesh">../assets/balsam_out/fish/meshes/torus_004.mesh</file>
 
+        <!-- meatball -->
+        <file alias="models/meatball/Meatball.qml">../assets/balsam_out/meatball/Meatball.qml</file>
+        <file alias="models/meatball/meshes/pan.mesh">../assets/balsam_out/meatball/meshes/pan.mesh</file>
+        <file alias="models/meatball/meshes/plane_004.mesh">../assets/balsam_out/meatball/meshes/plane_004.mesh</file>
+        <file alias="models/meatball/meshes/plate.mesh">../assets/balsam_out/meatball/meshes/plate.mesh</file>
+        <file alias="models/meatball/meshes/takoyaki.mesh">../assets/balsam_out/meatball/meshes/takoyaki.mesh</file>
+        <file alias="models/meatball/meshes/wood.mesh">../assets/balsam_out/meatball/meshes/wood.mesh</file>
 
-        <file alias="models/meatball/Meatball.qml">../assets/convert_model/meatball/Meatball.qml</file>
-        <file alias="models/meatball/meshes/cylinder_mesh.mesh">../assets/convert_model/meatball/meshes/cylinder_mesh.mesh</file>
-        <file alias="models/meatball/meshes/mesh_mesh.mesh">../assets/convert_model/meatball/meshes/mesh_mesh.mesh</file>
-        <file alias="models/meatball/meshes/mesh_mesh6.mesh">../assets/convert_model/meatball/meshes/mesh_mesh6.mesh</file>
-        <file alias="models/meatball/meshes/mesh_mesh9.mesh">../assets/convert_model/meatball/meshes/mesh_mesh9.mesh</file>
-        <file alias="models/meatball/meshes/takoyaki_mesh.mesh">../assets/convert_model/meatball/meshes/takoyaki_mesh.mesh</file>
-
-
-        <file alias="models/bread/Bread.qml">../assets/convert_model/bread/Bread.qml</file>
-        <file alias="models/bread/meshes/cube_201_mesh.mesh">../assets/convert_model/bread/meshes/cube_201_mesh.mesh</file>
-        <file alias="models/bread/meshes/mesh_mesh.mesh">../assets/convert_model/bread/meshes/mesh_mesh.mesh</file>
-        <file alias="models/bread/meshes/mesh_mesh7.mesh">../assets/convert_model/bread/meshes/mesh_mesh7.mesh</file>
-        <file alias="models/bread/meshes/plane_001_mesh.mesh">../assets/convert_model/bread/meshes/plane_001_mesh.mesh</file>
-
-
+        <!-- bread -->
+        <file alias="models/bread/Bread.qml">../assets/balsam_out/bread/Bread.qml</file>
+        <file alias="models/bread/meshes/cube_079.mesh">../assets/balsam_out/bread/meshes/cube_079.mesh</file>
+        <file alias="models/bread/meshes/cube_080.mesh">../assets/balsam_out/bread/meshes/cube_080.mesh</file>
+        <file alias="models/bread/meshes/cube_099.mesh">../assets/balsam_out/bread/meshes/cube_099.mesh</file>
+        <file alias="models/bread/meshes/plane_001.mesh">../assets/balsam_out/bread/meshes/plane_001.mesh</file>
     </qresource>
+
     <qresource prefix="/assets">
         <!-- Qt5 port: background video disabled; .mov excluded from the binary to
              save ~30 MB. Re-add this line if video playback is restored.

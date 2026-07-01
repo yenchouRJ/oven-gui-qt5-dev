@@ -1,4 +1,5 @@
 .vscode/
+balsam/
 build/
 build-*/
 **/build/

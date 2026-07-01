@@ -5,7 +5,7 @@ import QtQuick3D 1.15
 import QtQuick3D.Helpers 1.15
 import "drinks.js" as Data
 import QtQuick.Particles 2.15
-import "qrc:/assets/media/"
+// (removed: import "qrc:/assets/media/" — directory has no qmldir, never used as a QML type)
 // Qt5 port: QtMultimedia import removed; background video disabled (see below).
 // Model imports are centralized in DrinkModel3D.
 
