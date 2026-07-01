@@ -87,28 +87,4 @@ Node {
         }
     }
 
-    Node {
-        id: empty
-        y: 2.49004
-        scale.x: 4.96441
-        scale.y: 4.96441
-        scale.z: 4.96441
-
-        Model {
-            id: plane_001
-            y: -0.711335
-            scale.x: 0.657842
-            scale.y: 0.657842
-            scale.z: 0.657842
-            source: "meshes/plane_001.mesh"
-
-            PrincipledMaterial {
-                id: _material
-                roughness: 1
-            }
-            materials: [
-                _material
-            ]
-        }
-    }
 }

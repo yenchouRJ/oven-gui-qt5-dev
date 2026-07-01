@@ -52,7 +52,6 @@
         <file alias="models/pizza/meshes/cylinder_120.mesh">../assets/balsam_out/pizza/meshes/cylinder_120.mesh</file>
         <file alias="models/pizza/meshes/cylinder_121.mesh">../assets/balsam_out/pizza/meshes/cylinder_121.mesh</file>
         <file alias="models/pizza/meshes/cylinder_122.mesh">../assets/balsam_out/pizza/meshes/cylinder_122.mesh</file>
-        <file alias="models/pizza/meshes/plane_001.mesh">../assets/balsam_out/pizza/meshes/plane_001.mesh</file>
         <file alias="models/pizza/meshes/plane_074.mesh">../assets/balsam_out/pizza/meshes/plane_074.mesh</file>
         <file alias="models/pizza/meshes/plane_075.mesh">../assets/balsam_out/pizza/meshes/plane_075.mesh</file>
         <file alias="models/pizza/meshes/plane_076.mesh">../assets/balsam_out/pizza/meshes/plane_076.mesh</file>
@@ -66,7 +65,6 @@
         <file alias="models/chicken/meshes/cylinder.mesh">../assets/balsam_out/chicken/meshes/cylinder.mesh</file>
         <file alias="models/chicken/meshes/cylinder_001.mesh">../assets/balsam_out/chicken/meshes/cylinder_001.mesh</file>
         <file alias="models/chicken/meshes/cylinder_002.mesh">../assets/balsam_out/chicken/meshes/cylinder_002.mesh</file>
-        <file alias="models/chicken/meshes/plane_002.mesh">../assets/balsam_out/chicken/meshes/plane_002.mesh</file>
         <file alias="models/chicken/meshes/sphere.mesh">../assets/balsam_out/chicken/meshes/sphere.mesh</file>
         <file alias="models/chicken/meshes/sphere_001.mesh">../assets/balsam_out/chicken/meshes/sphere_001.mesh</file>
 
@@ -107,7 +105,6 @@
         <file alias="models/bread/meshes/cube_079.mesh">../assets/balsam_out/bread/meshes/cube_079.mesh</file>
         <file alias="models/bread/meshes/cube_080.mesh">../assets/balsam_out/bread/meshes/cube_080.mesh</file>
         <file alias="models/bread/meshes/cube_099.mesh">../assets/balsam_out/bread/meshes/cube_099.mesh</file>
-        <file alias="models/bread/meshes/plane_001.mesh">../assets/balsam_out/bread/meshes/plane_001.mesh</file>
     </qresource>
 
     <qresource prefix="/assets">

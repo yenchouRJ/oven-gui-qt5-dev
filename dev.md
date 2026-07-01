@@ -37,25 +37,44 @@ See `AGENT.md` for the full project analysis and component breakdown.
   auto-rotate `NumberAnimation` on the model node. Verified all other Quick3D types
   used (Loader3D/View3D/SceneEnvironment/cameras/lights/PrincipledMaterial + MSAA/SSAA
   enums + brightness/fade/castsShadow) **do** exist in the backport.
-- **DONE** Phase 5b (asset downscaling — fixes on-target OOM): first on-target run
-  was OOM-killed (`oven-gui` hit ~1.1GB virt / ~80MB RSS on a board with only
-  ~108MB managed RAM). Root cause: the menu `Repeater` builds all 5 carousel
-  delegates at once, each an `Image` with **no `sourceSize`** (`mipmap:true`), so
-  every full-res food PNG decoded simultaneously — chicken 4000×4000 = **61MB**
-  RGBA, pizza 34MB, fish 24MB, meatball 24MB ≈ **144MB** of textures alone. Fixes:
-  - Physically downscaled `chicken/pizza/fish/meatball.png` → **512×512** (LANCZOS,
-    optimized): files 26.7MB → 1.26MB; decoded RGBA 144MB → ~4MB. `bread.png`
-    already small (kept).
-  - `MenuPage` carousel `Image`: added `sourceSize: Qt.size(256,256)` (matches the
-    250px tile) + `asynchronous: true` to bound decode regardless of source.
-  - `DrinkModel3D`: added an `active` gate on `Loader3D`; `MenuPage` binds it to the
-    selected tile (`model3dLayer.visible`) so only **one** model's meshes (~max 13MB
-    fish) is resident instead of all five at once. Fixed the auto-rotate
-    `NumberAnimation` `running:` to use the same `model3dLayer.visible` (it was bound
-    to `View3D.visible`, which is always true).
-  - Binary shrank ~58MB → **33MB**; cross-compile + `qmllint` clean.
-- **TODO next:** re-deploy to MA35D1 (verify no OOM, measure FPS) → then Phase 5
-  (cut Quick3D AA/shadows). Mesh decimation (`*.mesh`) still pending if FPS is low.
+- **DONE** Phase 5b round 1 (PNG downscale — fixes first on-target OOM): first
+  on-target run was OOM-killed (~1.1GB virt / ~80MB RSS on 108MB board). Root
+  cause: carousel `Repeater` decoded all 5 food PNGs simultaneously with no
+  `sourceSize` — chicken 4000×4000 = 61MB RGBA etc., ~144MB textures total.
+  Fixes: downscaled food PNGs to **512×512**; added `sourceSize`/`asynchronous`
+  to carousel `Image`; `Loader3D.active` gate in `DrinkModel3D` keeps only the
+  selected model resident. Binary: ~58MB → **33MB**.
+- **DONE** Qt5 mesh format fix: source `.mesh` files were Qt6 balsam v7; Qt5
+  Quick3D rejects versions >3 with `QSSG.warning: Failed to load mesh`. Re-ran
+  Qt5.15 `balsam` on all 6 `.glb` files; new v3 meshes in `assets/balsam_out/`.
+  `tools/gen_qrc.py` regenerates `qml/qml.qrc` pointing at `balsam_out/`.
+- **DONE** Phase 5b round 2 (mesh decimation + PNG 512→256 — fixes second OOM):
+  even with the mesh format fix and `Loader3D.active`, the high-poly models
+  caused a second OOM (fish 440K tris alone = ~17MB vertex/index in llvmpipe
+  system RAM). Two fixes applied:
+
+  **Mesh decimation** — `gltf-transform weld + simplify --error 1` on all models
+  (the `--error` default of `0.0001` was preventing the simplifier from reaching
+  the target ratio, causing only 28–41% reduction instead of 95–97%):
+
+  | Model    | Source tris | Low tris | Reduction |
+  |----------|-------------|----------|-----------|
+  | chicken  | 281,464     | 10,338   | 96 %      |
+  | fish     | 440,960     | 10,890   | 97 %      |
+  | meatball | 264,316     |  8,036   | 97 %      |
+  | pizza    | 234,882     | 10,580   | 95 %      |
+  | bread    |  25,794     |  5,156   | 80 %      |
+  | turkey   |  31,056     |  6,201   | 80 %      |
+
+  Decimated GLBs in `assets/models/low/`; new balsam_out total: ~31MB → **1.7MB**.
+
+  **PNG downscale** — food images 512×512 → **256×256** (bread 557×350 → 256×161),
+  LANCZOS + optimize=True. Decoded RGBA in RAM: ~4MB → **~1.2MB**. Button icons
+  (115×115) left unchanged.
+
+  See `BUILD.md` for exact commands.
+- **TODO next:** re-deploy to MA35D1 (verify no OOM), measure FPS → Phase 5
+  (cut Quick3D AA/shadows: `antialiasingMode: NoAA`, `castsShadows: false`).
 
 ---
 
@@ -130,18 +149,20 @@ See `AGENT.md` for the full project analysis and component breakdown.
 
 ### Phase 5b — Asset downscaling (performance / size)
 > ~94 MB of desktop-grade assets. Goal: shrink runtime cost & resource size.
-- [x] **Textures/icons** (`assets/media/*.png`): downscaled the four food PNGs to
+- [x] **Textures/icons round 1** (`assets/media/*.png`): downscaled food PNGs to
       512×512 (chicken/pizza/fish/meatball: 26.7MB → 1.26MB on disk; 144MB → ~4MB
-      decoded). Added `sourceSize`/`asynchronous` to the carousel `Image` so decode
-      is bounded. **This was the on-target OOM fix.**
-- [x] **Video** (`assets/media/baking_pizza.mov`): already excluded from `qml.qrc`
-      (Phase 4). Original kept on disk for later re-enable/downscaling.
-- [ ] **Meshes** (`assets/convert_model/**/*.mesh`): decimate / re-export lower-poly
-      models; the high-poly desktop meshes are costly for software vertex processing.
-      (Mitigated for now: `Loader3D.active` gate keeps only the selected model
-      resident instead of all five.)
+      decoded). Added `sourceSize`/`asynchronous` to the carousel `Image`.
+- [x] **Textures/icons round 2** (`assets/media/*.png`): further downscaled to
+      **256×256** (food) / **256×161** (bread); decoded RGBA ~4MB → ~1.2MB.
+      Button icons (115×115) unchanged.
+- [x] **Video** (`assets/media/baking_pizza.mov`): excluded from `qml.qrc` (Phase 4).
+- [x] **Meshes** — `gltf-transform weld + simplify --ratio 0.03 --error 1` (heavy
+      models) and `--ratio 0.20 --error 1` (light models); `balsam` re-run on
+      `assets/models/low/`. `balsam_out/` total: ~31MB → **1.7MB** (77 meshes, all v3).
+      Key lesson: `--error` defaults to `0.0001` which prevents the simplifier from
+      reaching the target ratio; always pass `--error 1` for aggressive decimation.
 - [ ] Trim `qml.qrc` to only the assets actually used (it embeds everything now).
-- [x] Measure resulting binary size before/after: ~58MB → **33MB**.
+- [x] Binary size: ~58MB → **33MB** (after round-1 PNG + video removal).
 
 ### Phase 6 — Particles & misc
 - [ ] Verify `QtQuick.Particles` smoke effect (ParticleSystem/Emitter/ItemParticle)
@@ -162,15 +183,14 @@ See `AGENT.md` for the full project analysis and component breakdown.
 ---
 
 ## Open Questions / Risks
-- Quick3D performance under llvmpipe on dual-core 800 MHz — very tight; expect to
-  cut AA/shadows and decimate meshes heavily.
-- Mesh `.mesh` format compatibility between the model export tool and qt5quick3d 5.15.
+- Quick3D performance under llvmpipe on dual-core 800 MHz — mesh decimation done;
+  next: measure FPS and cut AA/shadows if needed.
 - Multimedia/gstreamer codec support for `.mov` on the target (moot while video disabled).
 - Qt5 has no RHI: confirm EGLFS OpenGL path works with Quick3D + llvmpipe.
 - How much can assets be downscaled before visual quality is unacceptable to the customer?
 
 ## Next Step
-> Port builds and cross-compiles. **Next: deploy to MA35D1 and run** with
-> `QT_QPA_PLATFORM=eglfs GALLIUM_DRIVER=llvmpipe ./oven-gui`, read the FPS overlay,
-> then tackle **Phase 5** (cut Quick3D AA/shadows) and **Phase 5b** (downscale
-> textures/meshes) based on measured performance.
+> Port builds, cross-compiles, and assets are decimated.  **Next: rebuild, deploy
+> to MA35D1 and run** with `QT_QPA_PLATFORM=eglfs GALLIUM_DRIVER=llvmpipe ./oven-gui`,
+> verify no OOM, then read the FPS overlay and tackle **Phase 5** (cut Quick3D
+> AA/shadows: `antialiasingMode: NoAA`, `castsShadows: false`).

@@ -75,54 +75,125 @@ for anything higher, producing the runtime warning:
 QSSG.warning: Failed to load mesh: :/qml/models/pizza/meshes/mesh_mesh.mesh
 ```
 
-### Re-generating meshes with Qt5 balsam
+### Step 1 — Decimate source GLBs (geometry reduction)
 
-The correct Qt5 v3 meshes have already been generated and are staged in
-`assets/balsam_out/` (all 83 meshes verified as format v3, magic `0xC8A07F4D`).
+The source `.glb` models were authored at desktop quality (160 K–440 K triangles
+each).  On MA35D1 (llvmpipe, all vertex/index data in system RAM), that causes OOM
+even with the `Loader3D.active` gate.  The models must be decimated **before**
+running `balsam`.
 
-To regenerate from scratch (if the source `.glb` files change), install a native
-x86 Qt5.15 with Quick3D tools via `aqtinstall` and re-run `balsam`:
+Decimated GLBs live in `assets/models/low/`.  To regenerate them:
+
+```sh
+# gltf-transform v4+ required; --error 1 removes the quality floor so the
+# algorithm actually reaches the target --ratio (without it the default
+# --error 0.0001 causes it to stop at ~30% reduction).
+npm install -g @gltf-transform/cli
+
+cd assets/models
+for model in chicken fish meatball pizza; do
+    gltf-transform weld ${model}.glb /tmp/${model}_w.glb
+    gltf-transform simplify /tmp/${model}_w.glb low/${model}.glb --ratio 0.03 --error 1
+done
+# lighter models (already low-poly enough)
+for model in bread turkey; do
+    gltf-transform weld ${model}.glb /tmp/${model}_w.glb
+    gltf-transform simplify /tmp/${model}_w.glb low/${model}.glb --ratio 0.20 --error 1
+done
+```
+
+Resulting triangle counts (source → low):
+
+| Model    | Source tris | Low tris | Reduction |
+|----------|-------------|----------|-----------|
+| chicken  | 281,464     | 10,338   | 96 %      |
+| fish     | 440,960     | 10,890   | 97 %      |
+| meatball | 264,316     |  8,036   | 97 %      |
+| pizza    | 234,882     | 10,580   | 95 %      |
+| bread    |  25,794     |  5,156   | 80 %      |
+| turkey   |  31,056     |  6,201   | 80 %      |
+
+> **Why `weld` first?**  Split vertices (UV seams, hard normals) prevent
+> `meshoptimizer` from merging triangles across boundaries.  Welding merges
+> coincident vertices first, allowing a much deeper simplification pass.
+
+> **`--ratio` vs `--error`:** `--ratio` is the target fraction of *vertices* to
+> keep (not triangles); actual triangle count may differ slightly.  `--error` is
+> the max allowed geometric error as a fraction of mesh radius — the default
+> `0.0001` is so tight it causes early termination.  Use `--error 1` to let the
+> algorithm reach the target ratio.
+
+### Step 2 — Re-generating meshes with Qt5 balsam
+
+Run `balsam` on the **decimated** GLBs in `assets/models/low/`.  The correct Qt5
+v3 meshes are already staged in `assets/balsam_out/` (all meshes verified as
+format v3, magic `0xC8A07F4D`).
+
+To regenerate from scratch, install a native x86 Qt5.15 with Quick3D tools via
+`aqtinstall` and run `balsam`:
 
 ```sh
 pip3 install aqtinstall
-aqt install-qt linux desktop 5.15.2 gcc_64 -m qtquick3d
-# balsam is at ~/Qt/5.15.2/gcc_64/bin/balsam
-
-BALSAM=~/Qt/5.15.2/gcc_64/bin/balsam
+python3 -m aqt install-qt linux desktop 5.15.2 gcc_64 -m qtquick3d -O /tmp/Qt5
+BALSAM=/tmp/Qt5/5.15.2/gcc_64/bin/balsam
 OUT=assets/balsam_out
 
 for model in pizza chicken fish meatball bread turkey; do
-    $BALSAM assets/models/${model}.glb -o $OUT/${model}/
+    rm -rf $OUT/$model
+    mkdir -p $OUT/$model
+    $BALSAM assets/models/low/${model}.glb --outputPath $OUT/${model}/
 done
+```
+
+Then regenerate `qml/qml.qrc`:
+
+```sh
+python3 tools/gen_qrc.py   # run from Oven_HMI_G2L_QT5/
 ```
 
 The generated `.qml` wrappers already carry `import QtQuick3D 1.15` — no
 version-patching needed.
 
-### Integrating balsam_out into the project (TODO)
+> **Turkey note:** `balsam_out/turkey/Turkey.qml` imports `QtQuick.Timeline 1.0`.
+> Turkey is **not currently embedded** in `qml.qrc` — add `"turkey"` to the
+> `MODELS` list in `tools/gen_qrc.py` when integrating.
 
-Qt5 balsam renames mesh files from the Qt6 `mesh_meshN.mesh` scheme to
-object-name-based filenames (e.g., `circle_020.mesh`, `cube_460.mesh`).
-Both the `.qml` wrappers and `qml.qrc` must be updated together:
+## PNG assets — downscaling
 
-1. **Replace `assets/convert_model/*/meshes/*.mesh`** with the files from
-   `assets/balsam_out/*/meshes/`.
-2. **Replace `assets/convert_model/*/*.qml`** with the `.qml` files from
-   `assets/balsam_out/*/` — they are already correct for Qt5.
-3. **Rebuild `qml/qml.qrc`** — every `<file alias="models/X/meshes/...">` entry
-   must be updated to the new object-name-based filenames.  The alias structure
-   stays the same (`models/<model>/meshes/<name>.mesh`); only the leaf filenames
-   and the source paths change.
+Food carousel images were downscaled to reduce decoded RGBA size in RAM
+(llvmpipe keeps all textures in system RAM):
 
-> **Turkey note:** `balsam_out/turkey/Turkey.qml` imports `QtQuick.Timeline 1.0`
-> for baked keyframe animations (the old `convert_model/turkey/Turkey.qml` did not).
-> The `libqtquicktimelineplugin.so` is present in the Buildroot sysroot, so the
-> import will work on target.  However, Turkey is **not currently embedded** in
-> `qml.qrc` at all — add it when integrating if the turkey model is needed.
+| File         | Before      | After       | RAM (decoded RGBA) |
+|--------------|-------------|-------------|-------------------|
+| chicken.png  | 512×512     | 256×256     | 1 MB → 256 KB     |
+| fish.png     | 512×512     | 256×256     | 1 MB → 256 KB     |
+| meatball.png | 512×512     | 256×256     | 1 MB → 256 KB     |
+| pizza.png    | 512×512     | 256×256     | 1 MB → 256 KB     |
+| bread.png    | 557×350     | 256×161     | 760 KB → 161 KB   |
+
+Downscaling was done with Pillow (LANCZOS, `optimize=True`).  Button icons
+(`left/right_click/unclick.png`, 115×115) were left unchanged.
+
+To redo:
+```sh
+source ~/.dt_env/bin/activate   # or any venv with Pillow
+python3 - << 'EOF'
+from PIL import Image
+import os
+cd = "assets/media"
+for name in ['chicken','fish','meatball','pizza']:
+    img = Image.open(f'{cd}/{name}.png').convert('RGBA')
+    img.resize((256,256), Image.LANCZOS).save(f'{cd}/{name}.png', optimize=True)
+img = Image.open(f'{cd}/bread.png').convert('RGBA')
+img.resize((256,161), Image.LANCZOS).save(f'{cd}/bread.png', optimize=True)
+EOF
+```
 
 ## Notes / next steps
 - If FPS is still too low: reduce/disable `antialiasingMode` (MSAA/SSAA) in
-  `MenuPage.qml` / `AdjustmentPage.qml` / `ProcessingPage.qml`, drop `castsShadow`,
-  and decimate meshes (see `../dev.md` Phase 5/5b).
+  `MenuPage.qml` / `AdjustmentPage.qml` / `ProcessingPage.qml`, and set
+  `castsShadows: false` / `receivesShadows: false` on all `Model` nodes.
+- Consider rendering `View3D` at half resolution and scaling up if vertex
+  throughput is still a bottleneck.
 - Confirm Buildroot `.config` enables `qt5quick3d`, `qt5quickcontrols2`,
   `qt5multimedia` (for `SoundEffect`), and `qt5serialport`.
