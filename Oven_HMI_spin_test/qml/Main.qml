@@ -31,7 +31,7 @@ Window {
     Text {
         z: 10
         anchors { top: parent.top; right: parent.right; margins: 12 }
-        text: "chicken.glb — original quality (281 K tris)"
+        text: "chicken.glb — step 1 (~98 K tris, ratio 0.35)"
         color:  "#aaaacc"
         font.pixelSize: 16
     }
