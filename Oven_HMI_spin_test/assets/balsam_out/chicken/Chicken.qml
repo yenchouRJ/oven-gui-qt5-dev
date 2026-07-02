@@ -16,12 +16,11 @@ Node {
         scale.z: 1.66755
         source: "meshes/cylinder_001.mesh"
 
-        PrincipledMaterial {
+        DefaultMaterial {
             id: orange_001_material
-            baseColor: "#ffff5f00"
-            metalness: 0
-            roughness: 0.335443
-            cullMode: Material.NoCulling
+            lighting:     DefaultMaterial.NoLighting
+            diffuseColor: "#ffff5f00"
+            cullMode:     Material.NoCulling
         }
         materials: [
             orange_001_material
@@ -33,12 +32,11 @@ Node {
             y: 0.841025
             source: "meshes/cube.mesh"
 
-            PrincipledMaterial {
+            DefaultMaterial {
                 id: coklat_material
-                baseColor: "#ff701c0c"
-                metalness: 0
-                roughness: 0.409862
-                cullMode: Material.NoCulling
+                lighting:     DefaultMaterial.NoLighting
+                diffuseColor: "#ff701c0c"
+                cullMode:     Material.NoCulling
             }
             materials: [
                 coklat_material
@@ -68,20 +66,18 @@ Node {
             scale.z: 1
             source: "meshes/cube_002.mesh"
 
-            PrincipledMaterial {
+            DefaultMaterial {
                 id: merah_muda_001_material
-                baseColor: "#ffcc3b32"
-                metalness: 0
-                roughness: 0.335443
-                cullMode: Material.NoCulling
+                lighting:     DefaultMaterial.NoLighting
+                diffuseColor: "#ffcc3b32"
+                cullMode:     Material.NoCulling
             }
 
-            PrincipledMaterial {
+            DefaultMaterial {
                 id: putih_001_material
-                baseColor: "#ffccab9b"
-                metalness: 0
-                roughness: 0.373418
-                cullMode: Material.NoCulling
+                lighting:     DefaultMaterial.NoLighting
+                diffuseColor: "#ffccab9b"
+                cullMode:     Material.NoCulling
             }
             materials: [
                 coklat_material,
@@ -93,12 +89,11 @@ Node {
                 id: cube_003
                 source: "meshes/cube_003.mesh"
 
-                PrincipledMaterial {
+                DefaultMaterial {
                     id: merah_001_material
-                    baseColor: "#ff6b0e09"
-                    metalness: 0
-                    roughness: 0.335443
-                    cullMode: Material.NoCulling
+                    lighting:     DefaultMaterial.NoLighting
+                    diffuseColor: "#ff6b0e09"
+                    cullMode:     Material.NoCulling
                 }
                 materials: [
                     merah_001_material
