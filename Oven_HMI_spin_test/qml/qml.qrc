@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="qml/Main.qml">../qml/Main.qml</file>
+        <file alias="assets/media/chicken.png">../assets/media/chicken.png</file>
+        <file alias="qml/models/chicken/Chicken.qml">../assets/balsam_out/chicken/Chicken.qml</file>
+        <file alias="qml/models/chicken/meshes/cube.mesh">../assets/balsam_out/chicken/meshes/cube.mesh</file>
+        <file alias="qml/models/chicken/meshes/cube_001.mesh">../assets/balsam_out/chicken/meshes/cube_001.mesh</file>
+        <file alias="qml/models/chicken/meshes/cube_002.mesh">../assets/balsam_out/chicken/meshes/cube_002.mesh</file>
+        <file alias="qml/models/chicken/meshes/cube_003.mesh">../assets/balsam_out/chicken/meshes/cube_003.mesh</file>
+        <file alias="qml/models/chicken/meshes/cylinder.mesh">../assets/balsam_out/chicken/meshes/cylinder.mesh</file>
+        <file alias="qml/models/chicken/meshes/cylinder_001.mesh">../assets/balsam_out/chicken/meshes/cylinder_001.mesh</file>
+        <file alias="qml/models/chicken/meshes/cylinder_002.mesh">../assets/balsam_out/chicken/meshes/cylinder_002.mesh</file>
+        <file alias="qml/models/chicken/meshes/plane_002.mesh">../assets/balsam_out/chicken/meshes/plane_002.mesh</file>
+        <file alias="qml/models/chicken/meshes/sphere.mesh">../assets/balsam_out/chicken/meshes/sphere.mesh</file>
+        <file alias="qml/models/chicken/meshes/sphere_001.mesh">../assets/balsam_out/chicken/meshes/sphere_001.mesh</file>
+    </qresource>
+</RCC>
