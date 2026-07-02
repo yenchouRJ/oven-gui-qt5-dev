@@ -159,28 +159,4 @@ Node {
         }
     }
 
-    Model {
-        id: plane_002
-        x: 4.01126
-        y: 1.03458
-        z: 7.40238
-        eulerRotation.x: 90
-        eulerRotation.y: 35.5336
-        eulerRotation.z: 2.0983e-06
-        scale.x: 1.2185
-        scale.y: 1.2185
-        scale.z: 1.22195
-        source: "meshes/plane_002.mesh"
-
-        PrincipledMaterial {
-            id: node01_Lighting_Plane_material
-            baseColor: "#ff000000"
-            roughness: 1
-            emissiveColor: "#ffffffff"
-            cullMode: Material.NoCulling
-        }
-        materials: [
-            node01_Lighting_Plane_material
-        ]
-    }
 }
