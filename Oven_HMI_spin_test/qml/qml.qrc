@@ -10,6 +10,7 @@
         <file alias="qml/models/chicken/meshes/cylinder.mesh">../assets/balsam_out/chicken/meshes/cylinder.mesh</file>
         <file alias="qml/models/chicken/meshes/cylinder_001.mesh">../assets/balsam_out/chicken/meshes/cylinder_001.mesh</file>
         <file alias="qml/models/chicken/meshes/cylinder_002.mesh">../assets/balsam_out/chicken/meshes/cylinder_002.mesh</file>
+        <file alias="qml/models/chicken/meshes/plane_002.mesh">../assets/balsam_out/chicken/meshes/plane_002.mesh</file>
         <file alias="qml/models/chicken/meshes/sphere.mesh">../assets/balsam_out/chicken/meshes/sphere.mesh</file>
         <file alias="qml/models/chicken/meshes/sphere_001.mesh">../assets/balsam_out/chicken/meshes/sphere_001.mesh</file>
     </qresource>
