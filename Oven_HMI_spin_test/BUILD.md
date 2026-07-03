@@ -432,6 +432,10 @@ The following are ranked by estimated FPS gain for this specific workload:
 
 ## Performance Summary
 
+> **Updated after completing all experiments.**
+> Several predictions below were revised once on-target results came in — see
+> the debug log section for the full measurement trail.
+
 - **No GPU means the CPU does everything.** The MA35D1 (dual Cortex-A35 @
   800 MHz) has no 3D GPU. llvmpipe runs every vertex transform, triangle
   rasterisation, and GLSL fragment shader instruction on the same two CPU cores
@@ -440,28 +444,251 @@ The following are ranked by estimated FPS gain for this specific workload:
   trivial shader and no engine overhead — it only proves DRM/KMS output works.
   A real Qt Quick3D scene adds 4 pipeline stages, a JS engine, and a full PBR
   shader on top.
-- **Triangles are not the bottleneck.** Reducing from 281 K to 10 K tris
-  (96% cut) only lifted FPS from OOM → 4 FPS. The real bottleneck is the
-  fragment shader: ~150 K pixels × ~140 float ops (PBR × 3 lights) = ~21 M
-  float ops per frame — already near the A35's effective throughput ceiling.
-- **Three lights make every pixel expensive.** Each `PointLight` re-evaluates
-  the full Cook-Torrance BRDF (GGX distribution, Smith masking, Schlick
-  Fresnel) per fragment. With 3 lights the fragment stage is 3× slower than
-  it needs to be; dropping to 1 `DirectionalLight` is the single cheapest
-  FPS gain available.
-- **PrincipledMaterial is a full desktop PBR shader.** It was designed for
-  systems where the fragment stage runs on hundreds of parallel GPU shading
-  units. On a single-threaded software renderer it costs ~140 float ops per
-  pixel vs ~25 for `DefaultMaterial` (Phong). Switching materials is also the
-  fix for the dark-shadow appearance (Phong has a built-in ambient term; PBR
-  without IBL has none).
-- **Qt's software stack adds meaningful overhead.** Every frame: V4 JS
-  evaluates `NumberAnimation` bindings, `QQuickWindow::sync()` walks the QML
-  tree, Quick3D rebuilds 9 transform matrices, Mesa validates GL state, and the
-  View3D FBO is composited back into the main framebuffer — all on the same
-  800 MHz cores, before a single triangle is drawn.
-- **The real fix is offloading pixel work, not reducing triangles.** Halving
-  the View3D render resolution (`layer.textureSize`) cuts fill work by 4×.
-  Switching to `DefaultMaterial` cuts shader cost by ~6×. Dropping to 1 light
-  saves ~30–50%. These three changes together could realistically push the
-  scene from 4 FPS into the 20–30 FPS range without touching the mesh.
+- **Neither triangles, shader complexity, fill rate, lights, nor draw calls
+  are the bottleneck.** All five were tested independently on-target.
+  Eliminating all rendering work (NoLighting, 1 draw call, 25% pixel area,
+  1 light) still produced ~4 FPS — identical to the PBR baseline.
+- **The real bottleneck is the Qt Quick3D scene-graph CPU overhead per frame.**
+  Every frame, regardless of what is rendered: V4 JS evaluates
+  `NumberAnimation` bindings, `QQuickWindow::sync()` walks the full QML tree,
+  Quick3D traverses every Node to recompute world transforms, Mesa validates
+  GL state for each draw call, and the View3D FBO is composited into the main
+  framebuffer — all serialised on the same 800 MHz cores.  This overhead is
+  constant and irreducible by changing mesh quality, material type, or
+  resolution.
+- **PrincipledMaterial context:** although PBR vs NoLighting made no FPS
+  difference, switching to `DefaultMaterial.NoLighting` is still necessary to
+  fix the dark-shadow rendering bug (PBR without IBL has no ambient term).
+- **The only viable paths to smooth animation on MA35D1 are:**
+  1. **2D flipbook** — pre-render the model at N rotation angles offline,
+     export as PNG frames, animate via a QML `Timer` + `Image.source` swap.
+     Zero per-frame 3D cost; as smooth as the frame count allows.
+  2. **Custom QQuickFramebufferObject** — bypass Qt Quick3D entirely; write a
+     minimal C++ renderer that issues exactly one `glDrawElements` per frame
+     with a hand-written GLSL shader.  Eliminates all QML/scenegraph overhead.
+  3. **Accept ~4 FPS with Qt Quick3D** — if the model only needs to look
+     alive (not smooth), 4 FPS is sufficient for a "slowly rotating food item"
+     use case; make the animation duration longer (e.g. 20 s/rev instead of 8 s)
+     so the jitter is less perceptible.
+
+---
+
+## Bottleneck isolation — debug log
+
+This section records the actual experiments run on MA35D1 to identify which
+pipeline stage is the FPS bottleneck.  Each experiment changes exactly one
+variable; the FPS delta tells us how much that variable contributes.
+
+### Experiment 1 — Triangle count (vertex stage)
+
+**Hypothesis:** reducing triangle count will linearly improve FPS, meaning
+vertex throughput is the bottleneck.
+
+**Method:** re-decimate `chicken.glb` with `gltf-transform simplify` at
+progressively lower `--ratio` values; re-balsam; deploy; record FPS.
+
+**Results:**
+
+| Step | Tris   | FPS | Delta vs prev |
+|------|--------|-----|---------------|
+| 0    | 281 K  | OOM  | —             |
+| 1    |  98 K  | ~2  | baseline      |
+| 2    |  42 K  | ~3  | +1            |
+| 3    |  10 K  | ~4  | +1            |
+
+**Conclusion:** a 10× triangle reduction (98 K → 10 K) produced only a 2×
+FPS gain.  If vertex throughput were the bottleneck, we would expect roughly
+proportional improvement.  Instead FPS barely moved — **vertex stage is not
+the primary bottleneck** at step 3.  Some other stage dominates frame time.
+
+> Note: steps 1→2→3 were derived by always simplifying from the original
+> GLB, not chaining from the previous step, to avoid compounding quality loss.
+> Command: `gltf-transform weld orig.glb /tmp/w.glb && gltf-transform simplify
+> /tmp/w.glb out.glb --ratio <R> --error 1`
+> The `--error 1` flag is mandatory — the default `--error 0.0001` causes the
+> simplifier to exit early at ~30–40% reduction regardless of `--ratio`.
+
+---
+
+### Experiment 2 — Fragment shader complexity (material stage)
+
+**Hypothesis:** the fragment shader cost dominates; switching from full PBR
+(`PrincipledMaterial`) to a no-op shader (`DefaultMaterial.NoLighting`) will
+show a significant FPS gain.
+
+**Method:** edit `Chicken.qml` post-balsam — replace every
+`PrincipledMaterial { baseColor: X; metalness: 0; roughness: Y }` with
+`DefaultMaterial { lighting: DefaultMaterial.NoLighting; diffuseColor: X }`.
+No mesh or balsam change.  Test on step-3 (10 K tris) mesh for isolation.
+
+> This was prototyped on the `unlit` branch (`git checkout unlit`).
+
+**Observed side-effect before FPS measurement:** model rendered as flat
+coloured segments (orange body, dark-brown parts, beige details) — confirming
+the earlier "dark shadow" was caused entirely by `PrincipledMaterial` having
+no ambient term without an IBL probe, not by a mesh or load failure.
+
+**FPS result: ~4 FPS — unchanged from PBR baseline.**
+
+**Conclusion:** eliminating ~140 float ops/pixel down to ~0 ops/pixel made
+no measurable difference.  **Fragment shader is NOT the bottleneck.**
+
+---
+
+### Experiment 3 — Pixel fill area (rasteriser stage)
+
+**Hypothesis:** the rasteriser fill cost dominates; reducing the number of
+pixels the View3D renders will improve FPS proportionally.
+
+**Method:** add `layer.enabled: true` and
+`layer.textureSize: Qt.size(width/2, height/2)` to the `View3D`.
+This renders the 3D scene to a 320×240 offscreen FBO (25% of the original
+640×480 = 307 200 pixels → 76 800 pixels), then Qt scales the FBO up to fill
+the panel.  The vertex stage, draw-call overhead, and Qt scenegraph work are
+**completely unchanged** — only the rasteriser and fragment shader see fewer
+pixels.
+
+```qml
+View3D {
+    anchors.fill: parent
+    layer.enabled:     true
+    layer.textureSize: Qt.size(width / 2, height / 2)  // 25% pixel area
+    layer.smooth:      true
+    ...
+}
+```
+
+**FPS result: ~4 FPS — unchanged.**
+
+**Conclusion:** cutting pixels from 307 200 → 76 800 (4× reduction) with an
+unchanged rasteriser+fragment cost profile made no difference.
+**Rasteriser fill rate is NOT the bottleneck.**
+
+> The composite blit (View3D FBO → window) still runs at full 640×480 even
+> with `layer.textureSize` set, so the blit itself was also a candidate.
+> Given no improvement, the blit cost is also negligible compared to the
+> true bottleneck.
+
+**Decision tree result:**
+
+```
+FPS unchanged (still ~4)?
+ └─ Rasteriser is NOT the bottleneck. The bottleneck is upstream.
+    → Proceed to experiments 4 and 5.
+```
+
+---
+
+### Summary of what each experiment isolates
+
+| Experiment | Variable changed | Stage isolated | FPS result |
+|------------|-----------------|----------------|------------|
+| 1 — triangle steps | polygon count | Vertex transform | OOM → ~4 (not proportional) |
+| 2 — NoLighting | GLSL shader ops/pixel | Fragment shader | ~4 (no change) |
+| 3 — layer.textureSize | pixels rendered | Rasteriser fill rate | ~4 (no change) |
+| 4 — remove PointLights | per-light uniform eval | Light processing | ~4 (no change) |
+| 5 — join meshes (1 draw call) | Mesa GL dispatch count | Draw-call overhead | ~4 (no change) |
+| 6 — all stacked | all of the above | Combined rendering cost | ~4 (no change) |
+
+The order matters: always change one variable at a time and return to the
+same baseline before the next experiment.  The baseline for all experiments
+above is: **step-3 mesh (10 K tris), PrincipledMaterial, 3 lights, NoAA,
+View3D at full 640×480**.
+
+---
+
+### Experiment 4 — Per-light uniform evaluation
+
+**Hypothesis:** Qt Quick3D evaluates light uniform buffers every frame for
+each light node, even when the material ignores them.  Removing 2 PointLights
+will reduce this overhead.
+
+**Method:** remove both `PointLight` nodes from the scene; keep only 1
+`DirectionalLight`.  Test alongside `NoLighting` materials so visual output
+is unaffected.
+
+**FPS result: ~4 FPS — unchanged.**
+
+**Conclusion:** per-light uniform evaluation is not a significant cost at
+this frame rate.  **Light node count is NOT the bottleneck.**
+
+---
+
+### Experiment 5 — Draw-call count (Mesa GL dispatch)
+
+**Hypothesis:** each `Model` node in Qt Quick3D translates to at least one
+`glDrawElements` call.  Each call has Mesa state-validation overhead on the
+CPU.  Reducing from 4 draw calls to 1 will cut this cost.
+
+**Method:** 
+1. Python script: unify all 3 bread materials to a single baseColor.
+2. `gltf-transform flatten + join`: collapse 4 separate mesh nodes into
+   1 mesh / 1 primitive / 1 material.
+3. Re-balsam: produces 1 `Model` with 1 `.mesh` file.
+4. Apply `DefaultMaterial.NoLighting` as before.
+
+Result: 4 `Model` nodes / 4 draw calls → 1 `Model` / 1 draw call.
+
+**FPS result: ~4 FPS — unchanged.**
+
+**Conclusion:** Mesa draw-call dispatch overhead is not the bottleneck.
+**Draw-call count is NOT the bottleneck.**
+
+---
+
+### Experiment 6 — All optimisations stacked
+
+**Method:** all of experiments 2–5 applied simultaneously:
+- `DefaultMaterial.NoLighting` (0 shader ops/pixel)
+- `layer.textureSize: Qt.size(width/2, height/2)` (25% pixel area)
+- 1 `DirectionalLight` only
+- 1 draw call (joined mesh, single material)
+
+This is the minimum possible rendering work a Qt Quick3D scene can do —
+essentially a coloured quad projected through a mesh.
+
+**FPS result: ~4 FPS — unchanged from the original PBR baseline.**
+
+**Conclusion: the ~250 ms/frame cost is entirely in the Qt Quick3D
+scene-graph and QML runtime overhead, not in any rendering operation.**
+
+The per-frame overhead that cannot be removed with the current architecture:
+
+| Source | Cost |
+|--------|------|
+| V4 JS engine — `NumberAnimation` binding eval | every frame |
+| `QQuickWindow::sync()` — QML tree walk | every frame |
+| Qt Quick3D scene manager — Node transform recompute | every frame |
+| Mesa GL — driver state validation per draw call | every frame (even 1 call) |
+| View3D FBO composite — blit to Qt Quick window | every frame, full resolution |
+
+On an 800 MHz Cortex-A35 with single-threaded rendering, this fixed overhead
+alone appears to consume the entire ~250 ms frame budget.
+
+---
+
+### Bottleneck verdict and recommended next steps
+
+**Verdict:** Qt Quick3D is not viable for smooth animation on MA35D1 at any
+mesh quality level.  The bottleneck is the engine overhead, not the content.
+
+**Recommended paths forward:**
+
+1. **2D flipbook animation** *(lowest risk, highest FPS)*  
+   Pre-render the model at N angles offline (e.g. Blender headless or a
+   desktop Qt build), export as PNG strip or individual frames.  Animate
+   in QML with a `Timer` + `Image.source` swap or a sprite-sheet `Image`
+   with `sourceClipRect`.  Cost per frame: one texture sample + one 2D
+   quad draw — easily 30+ FPS.
+
+2. **Custom `QQuickFramebufferObject`** *(highest FPS for true 3D)*  
+   Write a minimal C++ `QQuickFramebufferObject::Renderer` that issues
+   exactly one `glDrawElements` with a hand-written GLSL vertex + fragment
+   shader.  Bypasses Qt Quick3D scene graph entirely; no V4 JS, no node
+   traversal, no Mesa state rebuild.  Estimated overhead: <5 ms/frame.
+
+3. **Accept 4 FPS with a slower rotation** *(zero work, good-enough UX)*  
+   Increase `NumberAnimation` duration from 8 s to 20–30 s per revolution.
+   At 4 FPS the per-step angular jump is (360 / (20 × 4)) = 4.5°, which
+   is smoother than the current (360 / (8 × 4)) = 11.25°/step and likely
+   imperceptible to a casual observer glancing at a menu screen.
