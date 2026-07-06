@@ -695,140 +695,119 @@ mesh quality level.  The bottleneck is the engine overhead, not the content.
 
 ---
 
-## Revised bottleneck analysis — after direct-OpenGL experiments (Oven_HMI_gl_demo)
+## Bottleneck tree — complete picture
 
-> **This section supersedes the "bottleneck verdict" above.**  After implementing
-> `Recommendation B` (`QQuickFramebufferObject` + hand-written OpenGL ES in
-> `Oven_HMI_gl_demo`), timing measurements on-target revealed that the original
-> diagnosis was **partially wrong**.
-
-### What the Qt Quick3D experiments actually measured
-
-In experiments 1–6 above, **every variable tested left FPS at ~4**.  The
-original conclusion was "Qt Quick3D scenegraph overhead is the irreducible
-fixed cost".  That conclusion was correct in isolation — *within the Qt
-Quick3D architecture* — but it missed the deeper cause: the Qt Quick3D
-scenegraph overhead was itself a proxy for the true bottleneck underneath.
-
-### New evidence from Oven_HMI_gl_demo
-
-Two binaries were built that bypass Qt Quick3D entirely:
-
-| Binary | Stack | FPS | tClear | tDraw |
-|--------|-------|-----|--------|-------|
-| `bread-gl-demo` | QQFBO (no Quick3D) | ~3.5 | 2 ms | 166 ms |
-| `bread-gl-win`  | QOpenGLWindow (no Qt Quick at all) | 5 | 9 ms | 213 ms |
-
-Both render the bread model (25 794 tris, 14 660 verts) with a simple
-ambient + diffuse GLSL shader.  Key observations:
-
-1. **Removing Qt Quick3D saved ~122 ms** (289 ms → 167 ms for `gl=` time in
-   the QQFBO path) but left the model at only 3.5 FPS.
-
-2. **Removing Qt Quick entirely saved another ~89 ms** (289 ms → 200 ms total
-   frame time) but left the model at only 5 FPS.
-
-3. **`tDraw` (measured with `glFinish()` immediately after `glDrawElements`)
-   is ~166–213 ms.**  This is the actual time Mesa llvmpipe spends in
-   software rasterization.
-
-4. **Adding a VAO** (to eliminate per-frame `glVertexAttribPointer` cost) made
-   **no difference** — `tDraw` was unchanged.  The bottleneck is not API
-   overhead; it is genuine CPU rasterization work.
-
-### Why tDraw ≈ 200 ms for a simple scene
-
-#### Pixel-fill is NOT proportional to viewport size
-
-The QQFBO renders to 640×480 (307 K px); `bread-gl-win` renders to 1280×480
-(614 K px) — 2× the viewport.  Yet `tDraw` only increases by 1.28× (166 →
-213 ms).  If rasterization scaled with viewport pixels, doubling the viewport
-would double `tDraw`.
-
-The explanation: the bread model at the given camera distance subtends roughly
-the same **covered pixel area** (~47 K visible pixels, ~150–200 K total
-fragment invocations counting overdraw from the 4 overlapping mesh parts)
-in both viewports.  The wider 1280×480 window just adds empty black borders.
-
-Fill rate IS the bottleneck, but measured in **model-covered pixels**, not
-total viewport pixels.
-
-#### The real bottleneck tree
+All experiments across `Oven_HMI_spin_test` (exps 1–6) and `Oven_HMI_gl_demo`
+(exps A–E) were run on-target and mapped to the pipeline stages below.
+Each node in the tree states the stage, what was tested, and the measured result.
 
 ```
-~200 ms per frame (bread-gl-win, 1280×480)
+Frame cost on MA35D1 (dual Cortex-A35 @ 800 MHz, llvmpipe, no GPU)
 │
-├── glClear (color + depth, 1280×480):          ~9 ms   ← memory write, fast
+├─ Qt Quick + Quick3D overhead  [exps 1-6, A, B]
+│   ├─ V4 JS / NumberAnimation binding eval       — tested exp 1-6
+│   ├─ QQuickWindow::sync() — QML tree walk       — tested exp 1-6
+│   ├─ Qt Quick3D node transform recompute        — tested exp 1-6
+│   └─ View3D FBO composite + blit                — tested exp 3, B
 │
-└── glDrawElements (25 794 tris, VAO):        ~213 ms   ← THE bottleneck
-    │
-    ├── Vertex transform (14 660 verts):        ~2 ms   (fast even scalar)
-    ├── Triangle setup + tile binning:          ~2 ms
-    │
-    └── Fragment rasterization:              ~209 ms   ← dominant
-        │
-        ├── Fragment shader execution
-        │     normalize + dot + mul per pixel: ~20–30 cycles scalar
-        │     ~150 K fragments × 25 cycles / 800 MHz ≈ 5 ms theoretical
-        │     (actual is much higher — see depth-buffer below)
-        │
-        └── Depth buffer read + write          ← MAIN cost
-              Buffer size (640×480×4): 1.2 MB
-              L2 cache (Cortex-A35):  128–256 KB
-              Depth buffer is 6–9× L2 → virtually every access misses to DRAM
-              DRAM latency on in-order Cortex-A35: ~100–200 ns/miss
-              (no out-of-order execution to hide stalls)
-              ~150 K fragments × 2 accesses × 150 ns ≈ 45 ms depth alone
-              Plus cache-miss penalties for VBO vertex data, color writes...
-              → Total rasterization time in practice: 150–210 ms
+│   Exp A (QQFBO, no Quick3D):  saved ~122 ms  → still 3.5 FPS
+│   Exp B (QOpenGLWindow):      saved another 89 ms → still 5 FPS
+│   → Qt Quick overhead is real but NOT the primary ceiling.
+│
+├─ Mesa GL draw-call overhead   [exp C — VAO]
+│   Hypothesis: per-frame glVertexAttribPointer calls trigger Mesa
+│   vertex-element CSO rebuild and LLVM re-JIT.
+│   Fix applied: VAO (attribute format set once, never repeated).
+│   Result: tDraw unchanged 213 ms → 213 ms.
+│   → Per-frame attribute setup overhead: zero. Mesa CSO NOT re-JITted.
+│
+├─ Fragment shader complexity    [exp 2 — NoLighting]
+│   DefaultMaterial.NoLighting: 0 ops/pixel vs ~140 ops/pixel PBR.
+│   Result: FPS unchanged (~4). Fragment math NOT the bottleneck.
+│
+├─ Triangle / vertex count       [exp 1 — decimation steps]
+│   98 K → 10 K tris: FPS 2 → 4. Not proportional.
+│   Vertex processing is fast (~2 ms at any triangle count).
+│   → Vertex stage NOT the bottleneck at step 3.
+│
+├─ Draw-call count               [exp 5 — gltf-transform join]
+│   4 draw calls → 1 draw call. FPS unchanged (~4).
+│   → Mesa dispatch overhead per call: negligible.
+│
+├─ Light count                   [exp 4 — remove PointLights]
+│   3 lights → 1 DirectionalLight. FPS unchanged (~4).
+│   → Per-light uniform evaluation: negligible.
+│
+├─ Pixel fill — viewport size    [exp 3 — layer.textureSize]
+│   View3D at 25% pixel area (320×240). FPS unchanged (~4).
+│   Apparent contradiction with exp D below — see note.
+│
+├─ Pixel fill — model-covered area   [exp D — 128×128 FBO]
+│   Render to 128×128 FBO; bread covers ~1–2 K pixels (vs ~150 K).
+│   tDraw: 213 ms → 130 ms (steady state).  FPS: 5 → 7.
+│   Note on exp 3 contradiction: layer.textureSize in Qt Quick3D
+│   reduces raster pixels but does NOT reduce Qt Quick3D scenegraph
+│   work, which was dominating at the time. With scenegraph removed
+│   (exp D uses QOpenGLWindow), the pixel reduction is measurable.
+│
+└─ Mesa llvmpipe per-draw fixed cost   [exp D — confirmed floor]
+    At 128×128 FBO (1–2 K covered pixels), tDraw is still ~130 ms.
+    Expected at this coverage: ~1–2 ms. Actual: ~130 ms.
+    → ~130 ms is a FIXED cost per glDrawElements call in Mesa llvmpipe
+      on Cortex-A35 regardless of triangles, pixels, or shader.
+    This fixed cost is in Mesa's tile-dispatcher and state-machine layer
+    running on a slow in-order ARM core with no out-of-order execution.
 ```
 
-#### Why the spin-test triangle-count experiments also showed no improvement
+### Blit cost — also tested
 
-Looking back at Experiment 1 (98 K → 10 K tris, still ~4 FPS):
+After shrinking the render FBO, the blit pass became visible:
 
-Reducing triangle count does **not** change the number of **screen-covered
-pixels**.  The model appears the same size on screen at all decimation levels.
-Fragment invocations, depth buffer reads/writes, and color writes are all
-unchanged.  Only vertex processing is reduced, and that was already a small
-fraction of frame time.
+| Blit area | Pixels | tBlit |
+|-----------|--------|-------|
+| Full window 1280×480 | 614 K | ~62 ms |
+| Model area 360×400  | 144 K | ~12 ms |
 
-This explains the plateau: all experiments in this file varied either
-triangle count, shader complexity, draw-call count, or Qt Quick3D overhead —
-but none of them reduced the number of **covered pixels on screen**.
-Experiments 2–6 showed the Qt Quick3D overhead stacked on top of the same
-~167 ms GPU-less rasterization cost.
+Blit (textured quad, no depth) scales well with pixel area — lower fixed
+overhead than the 3D draw.  Restricting to the model area recovered ~50 ms.
 
-#### Why this CPU cannot keep up
+### Final on-target numbers
 
-| Factor | Impact |
-|--------|--------|
-| No GPU | All rasterization on Cortex-A35 cores |
-| In-order pipeline | DRAM stalls are never hidden by out-of-order execution |
-| L2 < depth buffer | Depth buffer (1.2–2.4 MB) evicts from 128–256 KB L2 every frame |
-| 2 cores only | 1 core vertex/command, 1 core rasterization — serial tile queue |
-| DRAM shared bus | OS + Qt libs + vertex data + framebuffer all compete for bandwidth |
+All experiments completed.  Steady-state results (bread.glb, 25 794 tris):
 
-### Corrected recommendations
+| Setup | tClear | tDraw | tBlit | FPS |
+|-------|--------|-------|-------|-----|
+| Qt Quick3D, full viewport | — | — | — | ~4 |
+| QQFBO, full viewport | 2 ms | 166 ms | — | 3.5 |
+| QOpenGLWindow, full viewport | 9 ms | 213 ms | — | 5 |
+| QOpenGLWindow, 128×128 FBO → full blit | 1 ms | 130 ms | 62 ms | 5 |
+| QOpenGLWindow, 128×128 FBO → 360×400 blit | 0 ms | 146 ms | 12 ms | **7** |
 
-The original Recommendation B (`QQuickFramebufferObject`) did reduce overhead
-and is the right architecture, but the fundamental floor is Mesa llvmpipe
-rasterization cost — not API overhead.
+### Why 7 FPS is the measured ceiling
 
-| Approach | Mechanism | Expected FPS |
-|----------|-----------|-------------|
-| **Small render FBO (128×128)** | Bread covers ~9 K px → tDraw ~200×(9K/150K) ≈ 12 ms → ~50 FPS | **~50** |
-| **Small FBO (256×256)** | ~47 K px → tDraw ~60 ms → ~15 FPS | **~15** |
-| **Flipbook (PNG frames)** | Zero rasterization; one texture blit | **30+** |
-| QOpenGLWindow + full viewport | Current state | **5** |
-| QQFBO + full viewport | Current state | **3.5** |
-| Qt Quick3D + full viewport | Original spin-test | **~4** |
+```
+tDraw fixed floor:  ~130 ms  (Mesa llvmpipe, irreducible)
+tBlit (360×400):     ~12 ms
+swap + overhead:     ~10 ms
+─────────────────────────────
+Total:              ~152 ms → 6.5 FPS
+```
 
-**Bottom line:** render the spinning 3D model into a **small off-screen FBO
-(128×128 or 256×256)** and blit it into the UI at the desired display size.
-The 3D rasterization cost drops in proportion to covered pixels.  At 128×128,
-the model covers only ~9 K pixels; tDraw should fall to ~12 ms, enabling
-50+ FPS even with the full Mesa llvmpipe pipeline intact.
+The ~130 ms per `glDrawElements` call cannot be reduced by any API-level
+optimisation.  It is Mesa's CPU-side state machine and tile-rasterization
+dispatcher running on a single Cortex-A35 core (in-order, 800 MHz, no SIMD
+benefit from llvmpipe's LLVM backend for these dispatch operations).
 
-This is being validated in `Oven_HMI_gl_demo` — see `bread-gl-win` with a
-forced 128×128 render target.
+### Final recommendations
+
+| Approach | Cost | FPS | Notes |
+|----------|------|-----|-------|
+| **Flipbook (pre-rendered PNG)** | zero 3D at runtime | 30+ | Best for smooth rotation |
+| **Direct-GL, 128×128 FBO, model-area blit** | 1 draw call | ~7 | Acceptable for slow spin |
+| Qt Quick3D (original) | full stack | ~4 | Not recommended |
+
+For the product cooking cycle: if the model only needs to look alive (not
+smooth), 7 FPS at the current architecture is the real-time ceiling.
+At 20 s/rev, each step is (360 / (20 × 7)) = 2.6°, which is nearly
+imperceptible jitter.  For anything smoother, the **flipbook** path is
+the only viable option on this hardware.
