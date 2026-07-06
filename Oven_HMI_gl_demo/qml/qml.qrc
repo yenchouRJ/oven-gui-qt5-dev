@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="qml/Main.qml">../qml/Main.qml</file>
+        <file alias="assets/models/bread.glb">../assets/models/bread.glb</file>
+        <file alias="assets/media/bread.png">../assets/media/bread.png</file>
+    </qresource>
+</RCC>
