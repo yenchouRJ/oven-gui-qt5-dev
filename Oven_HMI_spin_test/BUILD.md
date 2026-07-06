@@ -66,11 +66,13 @@ gltf-transform simplify /tmp/cw.glb assets/models/chicken.glb \
 After modifying `assets/models/chicken.glb`, regenerate meshes and `qml.qrc`:
 
 ```sh
+pip3 install aqtinstall
+python3 -m aqt install-qt linux desktop 5.15.2 gcc_64 -m qtquick3d -O /home/joeylu/opencode/coffee-machine-qt5-rework
 BALSAM=/home/joeylu/opencode/coffee-machine-qt5-rework/balsam/5.15.2/gcc_64/bin/balsam
 
 rm -rf assets/balsam_out/chicken
 mkdir -p assets/balsam_out/chicken
-$BALSAM assets/models/chicken.glb --outputPath assets/balsam_out/chicken/
+$BALSAM assets/models/chicken.glb -o assets/balsam_out/chicken/
 
 python3 tools/gen_qrc.py   # regenerates qml/qml.qrc
 ```

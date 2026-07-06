@@ -174,6 +174,11 @@ Food carousel images were downscaled to reduce decoded RGBA size in RAM
 Downscaling was done with Pillow (LANCZOS, `optimize=True`).  Button icons
 (`left/right_click/unclick.png`, 115×115) were left unchanged.
 
+Install Pillow in your Python environment if not already present:
+```sh
+pip install Pillow
+```
+
 To redo:
 ```sh
 source ~/.dt_env/bin/activate   # or any venv with Pillow

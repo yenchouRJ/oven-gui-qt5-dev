@@ -37,34 +37,61 @@ To further pinpoint the exact stage causing this ceiling, we implemented extreme
 
 ## 3. Bottleneck Analysis: Why Real-Time 3D Optimizations Failed
 
-The cross-validation data proves that neither the vertex transform stage, fragment shader complexity, rasterisation pixel count, nor the driver-level draw-call count represents the true performance bottleneck.
+The cross-validation data proves that neither the vertex transform stage, fragment shader complexity, rasterisation pixel count, draw-call count, nor the Qt Quick3D scenegraph overhead represents the primary performance bottleneck.
 
-The primary, unyielding bottleneck is the **structural CPU Per-Frame Overhead imposed by the Qt Quick3D Scenegraph framework itself**.
+### What the Qt Quick3D experiments established
 
-Every frame, before a single triangle is mathematically drawn by the software rasterizer, the 800 MHz Cortex-A35 CPU must execute a sequence of serialized runtime operations:
+Experiments 1–6 each changed exactly one variable while holding everything else constant.  Every variable tested — triangle count, shader complexity, pixel fill area, light count, draw-call count, and all of them stacked — left FPS unchanged at ~4.  This confirmed that no rendering operation was the bottleneck *within* Qt Quick3D.  To find the true floor, the Qt Quick3D layer was removed entirely.
 
-1. **QML V4 JS Engine Binding Evaluation**: The `NumberAnimation` driving the model's rotation executes JavaScript callbacks every paint cycle, calculating floating-point deltas and marking the scene nodes as dirty.
-2. **Scenegraph Synchronization**: `QQuickWindow::sync()` traverses the dense QML object tree to clone UI state and synchronize property data over to the C++ back-end.
-3. **3D Node Hierarchy Matrix Updates**: The Quick3D manager recalculates the global transform matrices (Model-View-Projection 4×4 float multiplications) and inverse-transpose normal vectors for every single node in the 3D tree.
-4. **Mesa GL State Validation**: Even for a single draw-call, the Mesa software layer must execute expensive CPU-bound pipeline checks and JIT-shader validation routines.
-5. **Framebuffer Compositing Blit**: The completed View3D Framebuffer Object (FBO) must be explicitly block-transferred (Blit) back into the primary Qt Quick display buffer, consuming severe DDR bus bandwidth.
+### Direct-OpenGL experiments (bypassing Qt Quick3D)
 
-On an 800 MHz Cortex-A35 CPU running a single-threaded render loop, **this fixed architectural administration cost alone consumes roughly 250 milliseconds (ms) per frame.** Consequently, no matter how much the 3D content is optimized, the framework imposes a absolute hardware-bound ceiling of **~4 FPS**.
+Two binaries were built that issue `glDrawElements` directly, with no Qt Quick3D, no QML scenegraph, no V4 JS:
+
+| Binary | API stack | FPS | tDraw |
+|--------|-----------|-----|-------|
+| `bread-gl-demo` (QQFBO) | Qt Quick, no Quick3D | ~3.5 | 166 ms |
+| `bread-gl-win` (QOpenGLWindow) | No Qt Quick at all | 5 | 213 ms |
+
+Removing the entire Qt Quick3D and QML stack raised the ceiling from ~4 FPS to only 5 FPS.  The bottleneck did not disappear — it merely shifted.
+
+### The real bottleneck: Mesa llvmpipe per-draw fixed cost
+
+`tDraw` was measured with `glFinish()` immediately after `glDrawElements`.  Even after rendering to a 128×128 FBO (where the model covers only ~1–2 K pixels), `tDraw` remained at ~130 ms.  A pixel-proportional rasterizer would predict ~1–2 ms at this coverage; the measured value is 65–130× higher.
+
+**~130 ms is a fixed cost per `glDrawElements` call in Mesa llvmpipe on Cortex-A35**, located in Mesa's tile-dispatcher and state-machine layer running on a slow in-order ARM core with no out-of-order execution.  This cost is irreducible by any API-level optimisation.
+
+### Why all rendering experiments also showed no improvement
+
+Because the Mesa fixed-per-draw floor (~130 ms) was always present underneath the Qt Quick3D overhead, changing triangles, shader complexity, pixel fill, or draw-call count could not move the FPS — those variables affect stages that are dwarfed by the 130 ms floor.  The Qt Quick3D overhead stacked on top added further cost but was not the primary ceiling.
+
+### Measured frame budget
+
+```
+Frame cost ceiling (QOpenGLWindow + 128×128 FBO + 360×400 blit):
+
+  tDraw fixed floor:  ~130 ms  (Mesa llvmpipe, irreducible)
+  tBlit (360×400):     ~12 ms
+  swap + overhead:     ~10 ms
+  ──────────────────────────
+  Total:              ~152 ms → ~7 FPS
+```
+
+This 7 FPS is the real-time 3D ceiling on MA35D1 at any mesh quality or shader complexity.  Qt Quick3D adds further overhead on top, which is why the Quick3D experiments measured ~4 FPS rather than ~7.
 
 ---
 
 ## 4. Architectural Analysis: Impact of a 3D GPU
 
-A common question is whether this CPU Per-Frame Overhead would vanish if the target SoC possessed a dedicated 3D GPU.
+A common question is whether this bottleneck would vanish if the target SoC possessed a dedicated 3D GPU.
 
-**The architectural overhead would still exist, but its impact on the final frame rate would be vastly minimized.**
+**The GPU would eliminate the Mesa llvmpipe fixed per-draw cost entirely, and the Qt/scenegraph overhead would become a much smaller fraction of frame time.**
 
 ### Serial execution on MA35D1 (no GPU — llvmpipe)
 
 On the MA35D1, there is only one pipeline and it runs on the CPU. Every stage blocks the next:
 
 ```
-Frame N (250 ms total):
+Frame N (~152–250 ms total):
  CPU: [JS eval] → [scene graph sync] → [transform recompute]
                 → [Mesa state validate] → [llvmpipe vertex shader]
                 → [llvmpipe rasterise] → [llvmpipe fragment shader]
@@ -72,7 +99,7 @@ Frame N (250 ms total):
                 ↑ all stages on the same 800 MHz core, back to back
 ```
 
-Total frame time = sum of every stage. Reducing any one stage (e.g. cutting shader work to zero) saves time only equal to that stage's slice — if another stage dominates, the saving is invisible. This is why all rendering experiments showed ~4 FPS: the fixed overhead stages at the front of the chain already consumed the entire 250 ms budget.
+Total frame time = sum of every stage. The irreducible ~130 ms Mesa per-draw floor means that even after removing all Qt Quick3D and QML overhead, the ceiling is only ~7 FPS.
 
 ### Parallel execution with a real GPU
 
@@ -97,12 +124,14 @@ Total frame time = `max(CPU_setup_time, GPU_render_time)`, not their sum.
 | Mesa per-draw-call state validation | CPU, heavy (full software path) | CPU, very light (kernel `ioctl`, ~10–50 µs) |
 | Vertex shader | CPU (llvmpipe JIT) | GPU — runs in parallel, zero CPU cost |
 | Rasterise + fragment shader | CPU (llvmpipe JIT) | GPU — runs in parallel, zero CPU cost |
+| Mesa llvmpipe fixed per-draw floor | **~130 ms — irreducible** | **eliminated** (hardware takes over) |
 | FBO composite blit | CPU (software blit) | GPU — runs in parallel, zero CPU cost |
 
 Qt Quick3D utilizes a strict **"CPU manages, GPU renders"** pipelined design. On the current MA35D1, the CPU is forced to handle both roles simultaneously. If hardware 3D acceleration were introduced, the execution dynamics would shift dramatically:
 
-* **The Management Overhead Diminishes**: With native GPU drivers, Mesa no longer needs to emulate the rasterizer or run JIT compilation on a generic CPU core. Pipeline state verification becomes highly hardware-optimized, drastically reducing driver wait-states. However, JavaScript binding evaluations, scene-graph tree syncs, and CPU-side matrix updates will still execute on the CPU sequentially. On a low-tier SoC with a GPU, this administrative cost might shrink from 250 ms down to 5–10 ms.
-* **Massive Parallelism Offload**: In a CPU-only environment, reducing triangles from 98K to 10K yields no benefit because the 250 ms CPU management time completely dwarfs the actual drawing time. With a hardware GPU, vertex shaders and complex Cook-Torrance PBR fragment shaders are processed across dozens of parallel compute pipelines simultaneously. If the GPU takes only 2 ms to render a 10K-mesh, and the CPU takes 5 ms to manage the scene graph, the total frame time drops to 7 ms, instantly unlocking stable **60+ FPS** performance.
+* **The llvmpipe fixed floor disappears**: With a real GPU driver, Mesa no longer runs the tile-rasterization dispatcher on the CPU. The ~130 ms irreducible per-draw cost is gone. Pipeline state verification becomes a lightweight kernel `ioctl`. The total CPU-side overhead might drop from ~150 ms to 5–10 ms.
+* **Massive Parallelism Offload**: With a hardware GPU, vertex shaders and PBR fragment shaders are processed across dozens of parallel compute pipelines simultaneously. If the GPU takes only 2 ms to render a 10K-mesh, and the CPU takes 5 ms to manage the scene graph, the total frame time drops to 7 ms, instantly unlocking stable **60+ FPS** performance.
+* **Why content optimisations were useless on MA35D1**: Reducing triangles from 98K to 10K yielded no benefit because the ~130 ms Mesa fixed floor completely dwarfed the ~2 ms vertex stage. On a GPU, those same triangle reductions would produce proportional gains.
 
 ---
 
@@ -117,16 +146,17 @@ Porting these design methodologies straight to an **Embedded level** (dual A35 c
 * **Technical Implementation**: Render the 3D asset's rotation offline on a development workstation using a desktop-class GPU or a headless Blender pipeline. Export the animation sequence as a series of 36 (or more) sequential 2D RGBA PNG frames. In QML, play back the frames using a lightweight `Timer` coupled with an `Image.source` swap, or a single master Sprite Sheet utilizing `sourceClipRect`.
 * **Engineering Advantage**: This completely bypasses 3D matrix math, software rasterisation, and GLSL fragment instructions on the target chip. The runtime cost drops to simple 2D texture sampling and memory block transfers (Blit). **This solution easily achieves a fluid 30+ FPS while fully preserving the high-end PBR lighting textures rendered on the PC.**
 
-### Recommendation B: Bypass Quick3D via Custom `QQuickFramebufferObject` (QQFBO)
+### Recommendation B: Direct-GL with Small Off-screen FBO (real-time 3D ceiling)
 
-* **Technical Implementation**: If real-time 3D rendering is an absolute business requirement (e.g., the UI must dynamically alter geometry based on real-time sensor feedback), **the client must completely abandon the Qt Quick3D module**. They should build a lightweight C++ renderer subclassing `QQuickFramebufferObject::Renderer`. The engineering team will need to manually write highly optimized, low-overhead OpenGL ES Vertex/Fragment shaders and issue direct, single-pass `glDrawElements` commands.
-* **Engineering Advantage**: This approach strips away the heavy scene-graph layers, V4 JS binding walks, and automated node synchronization. It reduces the fixed framework overhead from 250 ms to under 5 ms, allocating the CPU's limited cycles exclusively to `llvmpipe` for the absolute bare-minimum drawing routines.
+* **Technical Implementation**: Bypass Qt Quick3D entirely with a `QOpenGLWindow` (or `QQuickFramebufferObject`) renderer that issues a single `glDrawElements` per frame. Render the 3D model into a small off-screen FBO (128×128) and blit only the model area (e.g. 360×400 px) to the display. This is implemented in `Oven_HMI_gl_demo/`.
+* **Engineering Reality**: This approach removes all QML/scenegraph overhead (~50–80 ms/frame) and limits the blit cost to ~12 ms. The irreducible Mesa llvmpipe fixed-per-draw floor of ~130 ms remains. Measured result: **~7 FPS** — the hardware ceiling for any real-time 3D path on MA35D1.
+* **When to use**: if the product requires real-time geometry changes driven by sensor data, 7 FPS with a slow rotation (20 s/rev, ~2.6°/step) is visually acceptable for a background decorative element.
 
-### Recommendation C: Retain the ~4 FPS but Optimize via Animation Chronology
+### Recommendation C: Accept ~7 FPS and Optimize via Animation Chronology
 
-* **Technical Implementation**: If the 3D spinning model is purely decorative (e.g., an animated asset on a static menu screen) and requires zero user interactivity, change the `NumberAnimation` duration from 8 seconds per revolution to 20 or 30 seconds.
-* **Engineering Advantage**: At ~4 FPS, slowing down the rotation dramatically reduces the angular displacement per frame (from an 11.25° jump down to a 4.5° jump). This visually smooths out the frame-to-frame stepping jitter, turning a jarring lag into a slow, visually acceptable ambient rotation without adding any engineering or asset complexity.
+* **Technical Implementation**: Use the `QOpenGLWindow` + 128×128 FBO + model-area blit architecture (`Oven_HMI_gl_demo/`) and slow the rotation to 20–30 seconds per revolution.
+* **Engineering Advantage**: At ~7 FPS and 20 s/rev, each step is (360 / (20 × 7)) = 2.6° — nearly imperceptible jitter for a background decorative element. This requires no additional engineering beyond what is already implemented in `bread-gl-win`.
 
 ### Conclusion
 
-The client must understand that **this performance deficit cannot be solved by simple mesh decimation or polygon reduction.** It is an architectural conflict between Desktop-level design expectations and Embedded-level hardware realities. The graphics pipeline strategy must be adapted accordingly.
+The client must understand that **this performance deficit cannot be solved by mesh decimation, shader optimisation, or bypassing Qt Quick3D.** The irreducible floor is Mesa llvmpipe's ~130 ms fixed per-`glDrawElements` cost on the Cortex-A35. No API-level change removes it. The graphics pipeline strategy must be adapted: **flipbook for smooth animation; direct-GL small-FBO for real-time 3D at ~7 FPS.**
