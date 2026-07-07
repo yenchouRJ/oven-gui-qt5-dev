@@ -1,0 +1,11 @@
+config BR2_PACKAGE_QT5QUICK3D
+	bool "qt5quick3d"
+	depends on BR2_PACKAGE_QT5_JSCORE_AVAILABLE
+	depends on BR2_PACKAGE_QT5_GL_AVAILABLE
+	select BR2_PACKAGE_QT5DECLARATIVE
+	select BR2_PACKAGE_QT5DECLARATIVE_QUICK
+	help
+	  Qt Quick 3D module. Provides a high-level API for creating
+	  3D content integrated into Qt Quick scenes.
+
+	  https://doc.qt.io/qt-5/qtquick3d-index.html
