@@ -1,0 +1,11 @@
+config BR2_PACKAGE_QT6SHADERTOOLS
+	bool "qt6shadertools"
+	help
+	  Qt is a cross-platform application and UI framework for
+	  developers using C++.
+
+	  Qt Shader Tools provides the 'qsb' command-line tool and
+	  associated libraries for building cross-platform Qt shader
+	  pipelines. Required by Qt Quick 3D.
+
+	  https://doc.qt.io/qt-6/qtshadertools-index.html

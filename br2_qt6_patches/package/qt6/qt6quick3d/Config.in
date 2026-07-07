@@ -1,0 +1,21 @@
+config BR2_PACKAGE_QT6QUICK3D
+	bool "qt6quick3d"
+	depends on BR2_PACKAGE_QT6DECLARATIVE
+	depends on BR2_PACKAGE_QT6SHADERTOOLS
+	depends on BR2_PACKAGE_QT6_GL_SUPPORTS
+	select BR2_PACKAGE_QT6BASE_GUI
+	select BR2_PACKAGE_QT6BASE_CONCURRENT
+	help
+	  Qt is a cross-platform application and UI framework for
+	  developers using C++.
+
+	  Qt Quick 3D provides a high-level API for creating 3D content
+	  and 3D user interfaces based on Qt Quick. It extends the Qt
+	  Quick scene graph with spatial content and provides a way to
+	  mix 2D and 3D content.
+
+	  https://doc.qt.io/qt-6/qtquick3d-index.html
+
+comment "qt6quick3d needs qt6declarative, qt6shadertools and OpenGL"
+	depends on !BR2_PACKAGE_QT6DECLARATIVE || !BR2_PACKAGE_QT6SHADERTOOLS || \
+		!BR2_PACKAGE_QT6_GL_SUPPORTS

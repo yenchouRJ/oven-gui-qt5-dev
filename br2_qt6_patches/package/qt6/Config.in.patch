@@ -1,0 +1,17 @@
+diff --git a/package/qt6/Config.in b/package/qt6/Config.in
+index 276a0217..284b7b2f 100644
+--- a/package/qt6/Config.in
++++ b/package/qt6/Config.in
+@@ -45,8 +45,12 @@ if BR2_PACKAGE_QT6
+ 
+ source "package/qt6/qt6base/Config.in"
+ source "package/qt6/qt6core5compat/Config.in"
++source "package/qt6/qt6declarative/Config.in"
++source "package/qt6/qt6multimedia/Config.in"
++source "package/qt6/qt6quick3d/Config.in"
+ source "package/qt6/qt6serialbus/Config.in"
+ source "package/qt6/qt6serialport/Config.in"
++source "package/qt6/qt6shadertools/Config.in"
+ source "package/qt6/qt6svg/Config.in"
+ 
+ endif

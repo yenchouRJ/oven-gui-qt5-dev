@@ -1,0 +1,13 @@
+config BR2_PACKAGE_QT6DECLARATIVE
+	bool "qt6declarative"
+	select BR2_PACKAGE_QT6BASE_GUI
+	help
+	  Qt is a cross-platform application and UI framework for
+	  developers using C++.
+
+	  Qt Declarative provides the Qt QML and Qt Quick modules for
+	  developing UIs and applications with the QML language.
+	  Also provides Qt Quick Controls 2.
+
+	  https://doc.qt.io/qt-6/qtqml-index.html
+	  https://doc.qt.io/qt-6/qtquick-index.html

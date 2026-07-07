@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Buildroot <buildroot@buildroot.org>
+Date: Mon, 22 Jun 2026 00:00:00 +0000
+Subject: [PATCH] tools: make materialeditor optional when Qt::Network is absent
+
+materialeditor uses QLocalSocket/QLocalServer from QtNetwork. Guard it
+the same way balsamui is guarded on Qt::Widgets, so host builds with
+-DFEATURE_network=OFF do not fail.
+
+This mirrors what upstream Qt did after 6.4.x.
+
+Signed-off-by: Buildroot <buildroot@buildroot.org>
+---
+ tools/CMakeLists.txt | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/tools/CMakeLists.txt b/tools/CMakeLists.txt
+index 1111111..2222222 100644
+--- a/tools/CMakeLists.txt
++++ b/tools/CMakeLists.txt
+@@ -14,4 +14,8 @@
+ endif()
+ add_subdirectory(instancer)
+ add_subdirectory(shapegen)
+-add_subdirectory(materialeditor)
++if(TARGET Qt::Network)
++    add_subdirectory(materialeditor)
++else()
++    message(NOTICE "Skipping materialeditor as the condition \"TARGET Qt::Network\" is not met.")
++endif()

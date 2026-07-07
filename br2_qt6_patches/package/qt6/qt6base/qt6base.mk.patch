@@ -1,0 +1,33 @@
+diff --git a/package/qt6/qt6base/qt6base.mk b/package/qt6/qt6base/qt6base.mk
+index 6857725e..a6608efb 100644
+--- a/package/qt6/qt6base/qt6base.mk
++++ b/package/qt6/qt6base/qt6base.mk
+@@ -84,8 +84,26 @@ HOST_QT6BASE_DEPENDENCIES = \
+ 	host-pcre2 \
+ 	host-zlib
+ HOST_QT6BASE_CONF_OPTS = \
+-	-DFEATURE_gui=OFF \
+-	-DFEATURE_concurrent=OFF \
++	-DFEATURE_gui=ON \
++	-DFEATURE_concurrent=ON \
++	-DFEATURE_widgets=ON \
++	-DFEATURE_opengl=OFF \
++	-DINPUT_opengl=no \
++	-DFEATURE_egl=OFF \
++	-DFEATURE_eglfs=OFF \
++	-DFEATURE_vulkan=OFF \
++	-DFEATURE_xcb=OFF \
++	-DFEATURE_linuxfb=ON \
++	-DFEATURE_kms=OFF \
++	-DFEATURE_system_freetype=OFF \
++	-DFEATURE_harfbuzz=OFF \
++	-DFEATURE_png=OFF \
++	-DFEATURE_gif=OFF \
++	-DFEATURE_jpeg=OFF \
++	-DFEATURE_fontconfig=OFF \
++	-DFEATURE_libinput=OFF \
++	-DFEATURE_tslib=OFF \
++	-DFEATURE_printsupport=OFF \
+ 	-DFEATURE_xml=ON \
+ 	-DFEATURE_sql=OFF \
+ 	-DFEATURE_testlib=OFF \

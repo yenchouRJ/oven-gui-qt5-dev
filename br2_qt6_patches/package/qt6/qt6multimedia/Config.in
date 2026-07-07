@@ -1,0 +1,17 @@
+config BR2_PACKAGE_QT6MULTIMEDIA
+	bool "qt6multimedia"
+	depends on BR2_PACKAGE_QT6DECLARATIVE
+	select BR2_PACKAGE_QT6BASE_GUI
+	select BR2_PACKAGE_QT6BASE_NETWORK
+	help
+	  Qt is a cross-platform application and UI framework for
+	  developers using C++.
+
+	  Qt Multimedia provides a rich feature set for handling
+	  multimedia content including audio, video, and camera
+	  functionality.
+
+	  https://doc.qt.io/qt-6/qtmultimedia-index.html
+
+comment "qt6multimedia needs qt6declarative"
+	depends on !BR2_PACKAGE_QT6DECLARATIVE
